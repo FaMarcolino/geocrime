@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GeoCrime BH 9.1 — Inteligência policial com QuadTree</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/interface.css">
+<link rel="stylesheet" href="css/tema-painel.css"><link rel="preconnect" href="https://fonts.gstatic.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></head><body>
+<aside>
+<div class="brand"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span><span><b>GeoCrime BH</b><small>INTELIGÊNCIA POLICIAL · 9.1</small></span></div>
+<div class="nl"><span>MÓDULOS</span></div>
+<div id="al"></div>
+<div class="tabs"><button class="on" data-p="t1"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span><span>Pesquisa</span><span class="chv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></button><button data-p="t2"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/></svg></span><span>Policiamento</span><span class="chv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></button><button data-p="t3"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span><span>Análise</span><span class="chv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></button><button data-p="t4"><span class="ni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span><span>Relatórios</span><span class="chv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></button></div>
+
+<div class="tp on" id="t1">
+<h2>Base de registros (REDS) <span id="src" style="text-transform:none;color:var(--ac)"></span></h2>
+<div class="row" id="nb"><button data-n="1000">1k</button><button data-n="3000" class="on">3k</button><button data-n="6000">6k</button><button data-n="20000">20k</button></div>
+<div class="row"><button id="regen">Regerar</button><label class="btn">Importar CSV<input id="file" type="file" accept=".csv" hidden></label></div>
+<div class="res" id="svd" hidden></div>
+<div style="color:var(--mu);font-size:11px">CSV: lat, lng, tipo, hora, data (aaaa-mm-dd ou dd/mm/aaaa). Um assistente deixa você conferir as colunas e a natureza antes de importar (aceita , ; tab, UTF-8 ou Windows-1252). Base sintética de 12 meses.</div>
+<h2>Pesquisa por região, natureza e época</h2>
+<div class="row"><select id="fr"><option value="">Todas as regiões</option></select><select id="ft"><option value="">Todas as naturezas</option><option value="Roubo">Roubo (CVP)</option><option>Furto</option><option value="CVLI">CVLI (homicídio)</option><option value="Veiculos">Roubo/Furto de Veículo</option></select></div>
+<div class="row"><select id="fm"></select><select id="fe"><option value="">Qualquer época do mês</option><option value="i">Início (1–10)</option><option value="m">Meio (11–20)</option><option value="f">Fim (21–31)</option></select></div>
+<div class="row"><select id="fp"><option value="">Qualquer turno</option><option value="0-5">Madrugada 0–5h</option><option value="6-11">Manhã 6–11h</option><option value="12-17">Tarde 12–17h</option><option value="18-23">Noite 18–23h</option></select></div>
+<div style="color:var(--mu);font-size:11px">Natureza em “todas” = panorama geral da região; escolhendo uma = específico.</div>
+<h2>Pesos de gravidade (índice IG)</h2>
+<div class="fg"><label class="nf"><small>Roubo (CVP)</small><input class="wt" data-t="Roubo" type="number" value="3" min="0"></label><label class="nf"><small>Furto</small><input class="wt" data-t="Furto" type="number" value="1" min="0"></label><label class="nf"><small>CVLI (homicídio)</small><input class="wt" data-t="CVLI" type="number" value="5" min="0"></label><label class="nf"><small>Veículos</small><input class="wt" data-t="Veiculos" type="number" value="2" min="0"></label></div>
+<h2>QuadTree e camadas</h2>
+<div class="row"><span>Limite padrão <b id="capv">25</b></span><input id="cap" type="range" min="5" max="80" step="5" value="25"></div>
+<div class="row"><span>Prof. máx. <b id="depv">9</b></span><input id="dep" type="range" min="3" max="12" value="9"></div>
+<div class="row wrap"><label><input type="checkbox" id="lp" checked> Registros</label><label><input type="checkbox" id="lq" checked> Densidade</label><label><input type="checkbox" id="lh" checked> Manchas</label><label><input type="checkbox" id="lk"> Calor (KDE)</label><label><input type="checkbox" id="lr" checked> Regiões</label></div>
+<h2>Regiões e quadrantes (GeoJSON)</h2>
+<div class="hint" id="geoinfo"></div>
+<div class="row"><label class="btn">Importar regiões<input id="gfr" type="file" accept=".geojson,.json" hidden></label><label class="btn">Importar quadrantes<input id="gfq" type="file" accept=".geojson,.json" hidden></label></div>
+<div class="row"><button id="gbh">Regionais de BH (PBH)</button><button id="gfx">Regiões aproximadas</button></div>
+<div class="row"><button id="gqx">Remover quadrantes</button></div>
+<div style="color:var(--mu);font-size:11px">WGS84 ou SIRGAS 2000 / UTM 23S. Fonte das regionais: Prefeitura de Belo Horizonte, Dados Abertos (CC-BY).</div>
+<h2>Mapa base</h2>
+<div class="row"><select id="bs"><option value="ruas">Mapa base: ruas</option><option value="gray">Mapa base: cinza</option><option value="sat">Mapa base: satélite</option><option value="none">Sem mapa base</option></select></div>
+</div>
+
+<div class="tp" id="t2">
+<h2>Consulta de entorno (clique no mapa)</h2>
+<div class="row"><span>k = <b id="kv">5</b></span><input id="k" type="range" min="1" max="15" value="5"></div>
+<div class="fg"><label class="nf"><small>Raio de análise (m)</small><input id="R" type="number" value="500" min="100" max="5000" step="100"></label></div>
+<label><input type="checkbox" id="rr" checked> Rotas reais até os registros (OSRM, requer internet)</label>
+<div class="hint">Clique no mapa: o resultado (risco, registros mais próximos e rotas) aparece no cartão sobre o mapa. Ao selecionar uma área, o cartão também traça a rota real ligando todos os registros dela.</div>
+<div class="row"><button id="sel">▭ Selecionar área (ou Shift+arrastar)</button></div>
+<h2>Efetivo por região (valores fictícios editáveis)</h2>
+<div class="res" id="rt"></div>
+<div style="color:var(--mu);font-size:11px">Lim. = limite de registros por célula daquela região. Clique no nome para filtrar.</div>
+<button id="rd0" style="width:100%;margin-top:6px">Redistribuir policiamento por demanda</button><div id="rd"></div>
+<h2>Bases: capacidade e custo</h2>
+<div class="fg"><label class="nf"><small>Raio de atuação (m)</small><input id="PR" type="number" value="1200" min="200" max="5000" step="100"></label><label class="nf"><small>Atendimentos por VTR/mês</small><input id="cv" type="number" value="8" min="1"></label><label class="nf"><small>Custo da VTR (R$/mês)</small><input id="cvtr" type="number" value="25000" min="0"></label><label class="nf"><small>Custo do PM (R$/mês)</small><input id="cpm" type="number" value="9000" min="0"></label></div>
+<button class="pri" id="go" style="width:100%">Distribuir bases e calcular cobertura</button>
+<div class="res" id="pp">Posiciona as bases de cada região (quantidade da tabela) e confere capacidade e custo.</div>
+<h2>Ronda preventiva</h2>
+<div class="fg"><label class="nf full"><small>Dividir por</small><select id="rq"></select></label><label class="nf"><small>Paradas por VTR</small><input id="rm" type="number" value="4" min="1" max="20"></label><label class="nf"><small>VTR por quadrante (máx.)</small><input id="rv" type="number" value="3" min="1" max="8"></label><label class="nf"><small>Turno (horas)</small><input id="rh" type="number" value="6" min="1" max="12" step="0.5"></label><label class="nf"><small>Minutos por parada</small><input id="rs" type="number" value="10" min="0" max="120"></label></div>
+<label><input type="checkbox" id="rl" checked> Sair e voltar à base</label>
+<div class="row"><button id="rb" class="pri">Gerar rondas</button></div>
+<div class="res" id="rrs">Divide a área (regiões, quadrantes importados ou grade), distribui as manchas críticas entre as viaturas de cada quadrante e monta o percurso de cada VTR a partir da base, dentro do turno. Posicione as bases antes (Bases: capacidade e custo).</div>
+</div>
+
+<div class="tp" id="t3">
+<button id="dabrir" class="pri" style="width:100%;margin-top:6px">Abrir dashboard</button>
+<h2>Predição</h2>
+<div class="fg"><label class="nf"><small>Meia-vida da recência (dias)</small><input id="hl" type="number" value="45" min="7" max="180"></label><label class="nf full"><small>Horizonte da previsão</small><select id="phz"><option value="auto">Automático (pelos meses da base)</option></select></label></div>
+<button id="pd" class="pri" style="width:100%;margin-top:6px">Prever onde podem ocorrer novos crimes</button>
+<div class="res" id="pr">Valida os métodos em várias janelas de 30 dias, escolhe o que prova valor e abre um novo mapa com a previsão dos próximos 30 dias: intensidade por célula, zonas prioritárias com intervalo de incerteza e o resultado do backtest.</div>
+<h2>Aglomerados automáticos (DBSCAN)</h2>
+<div class="fg"><label class="nf"><small>Mínimo de registros</small><input id="mp" type="number" value="12" min="3"></label><button id="db" class="pri" style="align-self:end">Detectar</button></div>
+<div class="res" id="dbr">Usa o raio de análise como distância e a QuadTree nas buscas de vizinhança.</div>
+<h2>Comparar períodos</h2>
+<div class="row"><select id="ca"></select><select id="cb"></select></div>
+<div class="row"><button id="cmp" class="pri">Comparar</button><button id="cmpx">Limpar</button></div>
+<div class="res" id="cr">Mapa de diferença: vermelho aumentou, azul diminuiu.</div>
+<h2>Sazonalidade região × mês</h2>
+<div class="res" id="mx"></div>
+<h2>Benchmark: QuadTree × k-d tree × grade × linear</h2>
+<div class="row"><button id="bm">Comparar estruturas</button><button id="bsc">Escalabilidade</button></div><canvas id="sc" width="280" height="140" style="width:100%;display:none"></canvas>
+<div class="res" id="bmr">Mede o ganho real da estrutura de dados.</div>
+</div>
+
+<div class="tp" id="t4">
+<button id="rabrir" class="pri" style="width:100%;margin-top:6px">Abrir editor de relatório</button>
+<h2>Exportar</h2>
+<div style="color:var(--mu);font-size:11px;margin-bottom:6px">Usa as seções escolhidas no editor de relatório (título, ordem, comentários e resumo).</div>
+<button id="xp" class="pri" style="width:100%;margin-bottom:6px">Relatório em PDF (imprimir → salvar como PDF)</button>
+<button id="xc" style="width:100%;margin-bottom:6px">Relatório em CSV</button>
+<button id="xr" style="width:100%">Registros filtrados em CSV</button>
+<h2>Limitações e uso responsável</h2><div class="res" id="et"></div>
+</div>
+</aside>
+<header id="tbar">
+<button class="ib" id="hb" title="Mostrar/ocultar painel (P)" aria-label="Mostrar ou ocultar o painel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+<span class="ws"><small>ÁREA DE TRABALHO</small><b>Centro de comando</b></span>
+<nav class="vt" id="vt" aria-label="Vistas"><button class="on" data-v="mapa">Mapa</button><button data-v="dash">Dashboard</button><button data-v="rel">Relatório</button></nav>
+<div class="sbx" role="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="q" type="search" placeholder="Buscar região, local ou ação…" autocomplete="off" aria-label="Buscar região, local ou ação" role="combobox" aria-expanded="false" aria-controls="qr"><kbd>Ctrl K</kbd><div class="qr card" id="qr" role="listbox" hidden></div></div>
+<span class="tr"><button class="ib" id="sbt" title="Buscar" aria-label="Abrir a busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button><span class="dchip" id="dc" title="Origem dos dados"></span><button class="ib" id="fs" title="Tela cheia" aria-label="Tela cheia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button><button class="ib" id="bl" title="Alertas" aria-label="Alertas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span class="bdg" id="bn" hidden>0</span></button></span>
+<div class="card" id="bp" hidden role="dialog" aria-label="Alertas"></div>
+</header>
+<div id="bd"></div>
+
+<main><canvas id="c"></canvas>
+<div class="zb"><button id="zi" title="Aproximar (+)">+</button><button id="zo" title="Afastar (−)">−</button><button id="zf" title="Enquadrar (F)">⌂</button></div>
+<div id="lc"><div class="fb" id="fb"></div>
+<div class="card" id="wc"><b>Como usar</b><ol style="margin:6px 0 8px 16px;padding:0"><li><b>Filtre</b> por região, natureza, mês e turno (aba Pesquisa).</li><li><b>Clique no mapa</b> para ver o risco do local e os registros mais próximos com rotas.</li><li><b>Policiamento</b>: bases, ronda e redistribuição. <b>Análise</b>: predição e comparação de meses.</li></ol><div style="display:flex;gap:8px;align-items:center"><button class="pri" id="wx">Entendi</button><small style="color:var(--mu)">Atalhos: tecla ?</small></div></div>
+<div class="card" id="qc" hidden><div class="ch"><b>Resultado no mapa</b><button class="ic" id="qx" title="Fechar (Esc)">×</button></div><div class="res" id="insp"></div><div class="res" id="sl"></div></div>
+<div class="card" id="hp" hidden><div class="ch"><b>Atalhos</b><button class="ic" id="hx">×</button></div><div style="line-height:1.8"><kbd>+</kbd> <kbd>−</kbd> zoom · <kbd>F</kbd> enquadrar · <kbd>S</kbd> selecionar área<br><kbd>P</kbd> mostrar/ocultar painel · <kbd>Esc</kbd> limpar consulta<br><kbd>?</kbd> esta ajuda · Shift+arrastar = selecionar área<br>Passe o mouse sobre um registro ou mancha para ver detalhes.</div></div></div>
+<div class="tb" id="tb"><button data-t="panel" title="Mostrar/ocultar painel (P)">☰ Painel</button><button data-t="sel" title="Selecionar área (S)">▭ Área</button><button data-l="lp">Registros</button><button data-l="lq">Densidade</button><button data-l="lh">Manchas</button><button data-l="lk">Calor</button><button data-l="lr">Regiões</button><button data-t="fit" title="Enquadrar (F)">⌂ Enquadrar</button><button data-t="link" title="Copiar link da visão atual">🔗 Link</button><button data-t="help" title="Atalhos (?)">?</button></div>
+<div class="hud"><div class="hh"><b>INDICADORES</b><button class="ic" id="hm" title="Minimizar">–</button></div><div class="g">
+<div class="kpi"><span class="ki k1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><span class="kt"><small>Registros</small><b id="s1">0</b><em id="d1" class="nt"></em></span></div>
+<div class="kpi"><span class="ki k2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span class="kt"><small>Gravidade</small><b id="s5">0</b><em id="d2" class="nt"></em></span></div>
+<div class="kpi"><span class="ki k3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span><span class="kt"><small>Top 5 manchas</small><b id="s4">0%</b><em class="nt">dos registros</em></span></div>
+<div class="kpi"><span class="ki k4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span class="kt"><small>Células</small><b id="s2">0</b><em class="nt">prof. <span id="s3">0</span></em></span></div></div>
+<small style="color:var(--mu)">Ocorrências por hora do dia (roxo = período filtrado)</small>
+<canvas id="hc" width="230" height="58" style="width:100%"></canvas>
+<div id="hs" style="font-size:12px;margin-top:6px"></div>
+<div class="lg" id="lg"></div></div>
+<div id="pm" hidden><canvas id="pc"></canvas>
+<div class="card pmh"><div class="ch"><b id="pmtt">🔮 Mapa de predição</b></div>
+<div class="row"><select id="pnt"></select><select id="ppt"></select></div>
+<div class="row"><select id="pmz" aria-label="Horizonte da previsão"><option value="auto">Horizonte: automático</option></select></div>
+<div class="row"><select id="pmm" aria-label="Método de previsão"><option value="auto">Método: automático (backtest)</option></select></div>
+<div class="row wrap"><label><input type="checkbox" id="pwg"> Ponderar por gravidade</label><label><input type="checkbox" id="pzn" checked> Zonas prioritárias</label><label><input type="checkbox" id="ppr"> Registros reais do último período</label></div>
+<button class="pri" id="pmc" style="width:100%;margin-top:4px">← Voltar ao mapa de ocorrências</button></div>
+<div class="card pml" id="pml"></div>
+<div class="zb"><button id="pzi" title="Aproximar (+)">+</button><button id="pzo" title="Afastar (−)">−</button><button id="pzf" title="Enquadrar (F)">⌂</button></div></div><section id="vd" class="vista" hidden aria-label="Dashboard"><div class="vh"><div><small class="eb">ANÁLISE</small><h1>Dashboard</h1><p id="vds" class="mu"></p></div><div class="vc"><div class="seg" id="vde" role="group" aria-label="Quais registros"><button class="on" data-e="filtros">Filtros do mapa</button><button data-e="base">Toda a base</button></div><div class="seg" id="vdp" role="group" aria-label="Período"><button class="on" data-d="0">Tudo</button><button data-d="365">12 m</button><button data-d="180">6 m</button><button data-d="90">3 m</button><button data-d="30">30 d</button></div></div></div><div class="dg" id="vdc"></div></section>
+<section id="vr" class="vista" hidden aria-label="Editor de relatório"><div class="vh"><div><small class="eb">RELATÓRIOS</small><h1>Editor de relatório</h1><p class="mu">Escolha o que entra, ordene, comente e escreva. A prévia ao lado é o que será exportado.</p></div><div class="vc"><button id="rPdf" class="pri">Exportar PDF</button><button id="rCsv">CSV das tabelas</button><button id="rHtml">Arquivo HTML</button></div></div><div class="rl"><div class="rcfg card" id="rcfg"></div><div class="rprev"><div class="prevfolhas" id="rpaper"></div></div></div></section>
+</main><div id="ts"></div>
+<div id="md" class="modal" hidden><div class="card mdc"><div class="ch"><b id="mdt"></b><button class="ic" id="mdx" title="Fechar (Esc)">×</button></div><div id="mdb"></div><div class="mdf"><button id="mdc">Cancelar</button><button class="pri" id="mdo">Importar</button></div></div></div>
+<div id="rep"></div>
+
+<script src="js/00-dados-regionais-bh.js"></script>
+<script src="js/01-base.js"></script>
+<script src="js/02-quadtree.js"></script>
+<script src="js/03-nucleo.js"></script>
+<script src="js/04-policiamento.js"></script>
+<script src="js/05-rotas-osrm.js"></script>
+<script src="js/06-relatorios.js"></script>
+<script src="js/07-estruturas-e-analise.js"></script>
+<script src="js/08-eventos-e-interacao.js"></script>
+<script src="js/09-importar-csv.js"></script>
+<script src="js/10-interface.js"></script>
+<script src="js/11-regioes-geojson.js"></script>
+<script src="js/12-planejador-de-rondas.js"></script>
+<script src="js/13-backtest-predicao.js"></script>
+<script src="js/14-mapa-de-predicao.js"></script>
+<script src="js/15-graficos.js"></script>
+<script src="js/16-dashboard.js"></script>
+<script src="js/17-relatorio.js"></script>
+<script src="js/17b-relatorio-abnt.js"></script>
+<script src="js/18-ponte-powerapps.js"></script>
+<script src="js/19-inicializacao.js"></script></body></html>

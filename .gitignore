@@ -1,0 +1,17 @@
+# Só o app e os testes entram no repositório; o resto da pasta (versões antigas, zip, rascunhos) fica de fora.
+/*
+!/.gitignore
+!/README.md
+!/geocrime-bh/
+!/testes/
+
+# gerado a cada execução dos testes (capturas, PDFs, relatórios)
+/testes/saida/
+node_modules/
+
+# pacote único: gere com "node build.mjs" (remova esta linha se quiser versioná-lo)
+/geocrime-bh/dist/
+
+# sistema
+Thumbs.db
+.DS_Store
