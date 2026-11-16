@@ -28,7 +28,7 @@ cn.onpointerup=e=>{if(dr&&dr.sel){selStats();dr=null;return}if(dr&&dr.mv<5)inspe
 cn.addEventListener('wheel',e=>{e.preventDefault();FL++;zoom(e.deltaY<0?1.2:1/1.2,e.offsetX,e.offsetY)},{passive:false});
 $('zi').onclick=()=>zoomA(1.4);$('zo').onclick=()=>zoomA(1/1.4);$('zf').onclick=()=>fit(null,1);
 
-function load(all,label){S.all=all;S.rep={};S.pin=null;S.pm=null;S.sr=null;$('pm').hidden=true;S.knn=[];$('insp').textContent='Clique no mapa: k-NN + risco na vizinhança.';$('src').textContent=label;setBox();fit();buildMonths();rebuild();hourChart()}
+function load(all,label){S.all=all;S.cenario=null;S.rep={};S.pin=null;S.pm=null;S.sr=null;$('pm').hidden=true;S.knn=[];$('insp').textContent='Clique no mapa: k-NN + risco na vizinhança.';$('src').textContent=label;setBox();fit();buildMonths();rebuild();hourChart()}
 document.querySelectorAll('#nb button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#nb button').forEach(x=>x.classList.toggle('on',x===b));NSEL=+b.dataset.n;load(gen(NSEL),'· sintético')});
 $('regen').onclick=()=>load(gen(NSEL),'· sintético');
 $('ft').onchange=$('fp').onchange=$('fm').onchange=$('fe').onchange=()=>{rebuild();hourChart()};

@@ -226,6 +226,47 @@ if (G('policiamento')) {
   await T('ronda: mesmo clique 3× seguidas deixa estado coerente (sem corrida)', async () => { await E(`document.getElementById('rb').click()`); await sleep(100); await E(`ronda();ronda()`); ok(await until(page, `/Percursos|linha reta/.test(document.getElementById('rrs').textContent)`, 120000)); ok(await E('S.rt.q.every(q=>q.g.length>0)')); });
   await T('ronda com filtro de região/turno e com filtro vazio', async () => { await E(`__h.set('fr',3);__h.set('fp','18-23')`); await E(`ronda()`); await until(page, `/Percursos|linha reta|Sem /.test(document.getElementById('rrs').textContent)`, 90000); const n = await E('S.rt?S.rt.q.length:0'); note('ronda região 3 noite', n + ' rotas'); await E(`__h.set('ft','CVLI');__h.set('fe','i');__h.set('fr',0);__h.set('fp','0-5')`); await E('ronda()'); await sleep(2500); const b = await bad(); ok(!b.length, b.join()); await E(`['fr','ft','fm','fe','fp'].forEach(i=>__h.set(i,''))`); });
   await T('clicar na linha da ronda voa até a rota', async () => { await rondaRun({rq: '3'}); const s0 = await E('S.V.s'); await E(`document.querySelector('#rrs [data-q="0"]').click()`); await sleep(800); ok(await E('S.V.s') !== s0, 'não moveu'); });
+  await T('ronda por células da QuadTree: 1 VTR por célula, paradas dentro da célula, mede o trecho fora da divisão', async () => {
+    await rondaRun({rq: 'cel', rn: 10, rm: 4, rv: 3, rh: 6, rs: 10, rl: true, rdn: 'on'});
+    const r = await E(`(()=>{const R=S.rt.q;return{cel:S.rt.quads.length,nr:R.length,um:S.rt.quads.every(q=>q.k===1&&q.cel),dentro:R.every(r=>r.o.every(p=>r.quad.has(p.x,p.y))),max:Math.max(...R.map(r=>r.o.length)),
+      fora:R.filter(r=>r.real).map(r=>r.fora),col:/Fora da divisão/.test(document.getElementById('rrs').textContent),op:[...document.getElementById('rq').options].map(o=>o.value).join(),hid:document.getElementById('rnl').hidden,txt:/célula\\(s\\)/.test(document.getElementById('rrs').textContent)}})()`);
+    ok(r.cel >= 1 && r.cel <= 10 && r.nr === r.cel && r.um, JSON.stringify(r)); ok(r.dentro, 'parada fora da célula'); ok(r.max <= 4, 'paradas > 4'); ok(r.fora.length > 0 && r.fora.every(f => typeof f === 'number' && f >= 0 && f <= 1), 'fora da divisão não medido: ' + r.fora); ok(r.col && r.txt, 'tabela/resumo sem a coluna'); ok(/cel/.test(r.op) && /,5,/.test(r.op) && /,8$/.test(r.op), 'opções do seletor: ' + r.op); ok(!r.hid, 'campo de nº de células escondido');
+    note('ronda por células', `${r.cel} células; trecho fora da divisão (por rota): ${r.fora.map(f => Math.round(f * 100) + '%').join(' ')}`); });
+  await T('ronda: grade 6×6 com e sem subdivisão por viatura (rota ajustada ou medida)', async () => {
+    await rondaRun({rq: '6', rm: 3, rv: 1, rh: 6, rs: 10, rl: true, rdn: 'on'}); const a = await E(`({n:S.rt.q.length,f:S.rt.q.filter(r=>r.real).map(r=>r.fora),aj:S.rt.q.filter(r=>r.ajustada).length,alta:S.rt.q.filter(r=>r.fora>LIM_FORA).length,dep:S.rt.q.filter(r=>r.dep).every(r=>r.quad.has(r.dep.x,r.dep.y))})`);
+    ok(a.n > 4 && a.f.every(f => typeof f === 'number'), JSON.stringify(a));
+    await E(`document.getElementById('rdn').checked=false`); await rondaRun({rq: '6', rm: 3, rv: 1, rh: 6, rs: 10, rl: true}); const b = await E(`({n:S.rt.q.length,aj:S.rt.q.filter(r=>r.ajustada).length,f:S.rt.q.filter(r=>r.real&&typeof r.fora==='number').length})`);
+    ok(b.aj === 0 && b.f > 0, 'desligado não deveria refazer rotas: ' + JSON.stringify(b)); await E(`document.getElementById('rdn').checked=true`);
+    note('grade 6×6', `${a.n} rotas; ${a.aj} refeitas por alternativas; ${a.alta} ainda acima de 10% fora da divisão (ligado). Desligado: ${b.n} rotas`); });
+  await T('subdivisão por viatura: cada divisão com k VTR é repartida em k territórios disjuntos, cada rota com paradas só no seu', async () => {
+    await E('alloc()'); await rondaRun({rq: 'reg', rm: 4, rv: 3, rh: 6, rs: 10, rl: true});
+    const r = await E(`(()=>{const o={multi:0,erro:[],tint:0,nomes:0,fora:[]};for(const q of S.rt.quads){const rs=S.rt.q.filter(r=>r.quad===q);if(q.k<2)continue;o.multi++;
+      if(!q.zonas||q.zonas.length<2||q.zonas.length>q.k){o.erro.push(q.nome+': zonas '+(q.zonas&&q.zonas.length)+' de '+q.k);continue}
+      if(!q.tint||!q.tint.length)o.erro.push(q.nome+': sem mancha');else o.tint++;
+      const amostra=q.P.slice(0,300);if(!amostra.every(p=>q.zonas.filter(z=>z.has(p.x,p.y)).length===1))o.erro.push(q.nome+': zonas não são disjuntas');
+      const zs=new Set(rs.map(r=>r.zona));if(zs.size!==rs.length||rs.some(r=>!r.zona))o.erro.push(q.nome+': rota sem zona própria');
+      for(const r of rs)if(!r.o.every(p=>r.zona.has(p.x,p.y)))o.erro.push(r.nome+': parada fora da subdivisão');
+      if(rs.some(r=>r.zona.c!==r.c))o.erro.push(q.nome+': cor da zona ≠ cor da rota')}
+      o.fora=S.rt.q.filter(r=>r.real).map(r=>r.fora);o.nomes=S.rt.q.every(r=>/ · VTR \\d$/.test(r.nome));return o})()`);
+    ok(r.multi > 0 && !r.erro.length, JSON.stringify(r.erro.slice(0, 4))); ok(r.tint === r.multi && r.nomes, 'mancha/nomes'); ok(r.fora.length > 0 && r.fora.every(f => typeof f === 'number' && f >= 0 && f <= 1), 'fora não medido');
+    ok(await E(`/subdivisão/.test(document.getElementById('rrs').textContent)`), 'resumo não cita a subdivisão');
+    const base = await E(`S.rt.q.filter(r=>r.dep).length`); ok(base > 0, 'nenhuma rota sai de base'); ok(await E(`S.rt.q.filter(r=>r.dep&&r.zona&&!r.zona.has(r.dep.x,r.dep.y)).every(r=>r.legs&&r.legs.length>1)`), 'sem trechos por perna para descontar a base');
+    await E(`document.getElementById('rdn').checked=false`); await rondaRun({rq: 'reg', rm: 4, rv: 3, rh: 6, rs: 10, rl: true}); ok(await E(`S.rt.quads.every(q=>!q.zonas&&!q.tint)&&S.rt.q.every(r=>!r.zona)`), 'desligado ainda subdivide'); await E(`document.getElementById('rdn').checked=true`);
+    note('subdivisão por viatura', `${r.multi} divisões com 2+ VTR; trecho fora da subdivisão: média ${(r.fora.reduce((a, b) => a + b, 0) / r.fora.length * 100).toFixed(0)}%, ${r.fora.filter(f => f > 0.1).length}/${r.fora.length} rotas acima de 10%`); });
+  await T('ronda: clicar na linha abre as paradas com links do Google Maps (≤9 paradas por link) e do Waze', async () => {
+    await E('alloc()'); await rondaRun({rq: '2', rm: 20, rv: 1, rh: 12, rs: 1, rl: true, rdn: 'on'}); await E(`document.querySelector('#rrs [data-q="0"]').click()`); await sleep(500);
+    const r = await E(`(()=>{const r=S.rt.q[0],e=document.getElementById('rdet'),as=[...e.querySelectorAll('a')],mp=as.filter(a=>/Rota no Google Maps/.test(a.textContent)),wz=as.filter(a=>/^Waze$/.test(a.textContent));
+      return{stops:r.o.length,mp:mp.map(a=>a.href),wz:wz.map(a=>a.href),alvo:as.every(a=>a.target==='_blank'&&/noopener/.test(a.rel)),li:e.querySelectorAll('ol li').length,dep:!!r.dep,fechado:S.rt.fechado,sel:document.querySelectorAll('#rrs tr.hl.on').length,sv:linksMaps(r).length}})()`);
+    ok(r.stops >= 5 && r.mp.length === Math.ceil((r.stops + (r.dep ? 2 : 0) - 1) / 10), JSON.stringify({stops: r.stops, mp: r.mp.length, dep: r.dep}));
+    ok(r.mp.every(u => /^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&origin=-19\.\d{6},-4[34]\.\d{6}&destination=-19\.\d{6},-4[34]\.\d{6}&travelmode=driving/.test(u)), 'formato Maps: ' + r.mp[0]);
+    ok(r.mp.every(u => { const w = (u.match(/waypoints=([^&]*)/) || [, ''])[1]; return w === '' || decodeURIComponent(w).split('|').length <= 9; }), 'mais de 9 paradas intermediárias num link');
+    if (r.mp.length > 1) { const u0 = new URL(r.mp[0]), u1 = new URL(r.mp[1]); ok(u1.searchParams.get('origin') === u0.searchParams.get('destination'), 'partes não se encadeiam'); }
+    ok(r.wz.length === r.stops + (r.dep ? 1 : 0) && r.wz.every(u => /^https:\/\/waze\.com\/ul\?ll=-19\.\d{6},-4[34]\.\d{6}&navigate=yes$/.test(u)), 'links do Waze: ' + r.wz[0]); ok(r.alvo, 'links sem target/noopener'); ok(r.li === r.stops + (r.dep ? 1 : 0) && r.sel === 1, 'lista/seleção');
+    ok(await E(`(()=>{const x=S.rt.q[0],P=pontosRota(x),u=new URL(linksMaps(x)[0]);const lat=(LAT0+P[0].y/KY).toFixed(6);return u.searchParams.get('origin').startsWith(lat+',')})()`), 'origem ≠ saída da rota'); });
+  await T('ronda: Latitude/Longitude das paradas no relatório e CSV; clicar num link não move o mapa', async () => {
+    const r = await E(`({h:S.rep.rondaParadas.h.join(),ok:S.rep.rondaParadas.r.every(x=>+x[5]<-19.7&&+x[5]>-20.1&&+x[6]<-43.8&&+x[6]>-44.1)})`); ok(/Latitude,Longitude/.test(r.h) && r.ok, JSON.stringify(r));
+    const s0 = await E('S.V.s+","+S.V.ox'); await E(`document.querySelector('#rdet a').addEventListener('click',e=>e.preventDefault(),{once:true});document.querySelector('#rdet a').click()`); await sleep(300); ok(await E('S.V.s+","+S.V.ox') === s0, 'o clique no link moveu o mapa');
+    await E(`['rq','rm','rv','rh','rs'].forEach((i,k)=>__h.set(i,['3',4,2,6,10][k]));document.getElementById('rdn').checked=true;document.getElementById('rl').checked=true`); });
   await T('OSRM fora do ar (fetch rejeita): tempos estimados, linha reta e aviso', async () => {
     await E(`window.__f=window.fetch;window.fetch=()=>Promise.reject(new Error('offline'))`); await E('S.rt=null;ronda()'); ok(await until(page, `!!S.rt&&/linha reta/.test(document.getElementById('rrs').textContent)`, 30000), 'sem aviso'); const t = await E(`document.getElementById('rrs').textContent`); ok(/Tempos estimados/.test(t), 'sem aviso de tempos estimados'); const r = await rondaChk(4, 3); ok(!r.e.length, r.e.join(' | '));
     await E(`S.selM={x0:S.bb[0],y0:S.bb[1],x1:S.bb[2],y1:S.bb[3]};selStats()`); ok(await until(page, `/sem trajeto/.test(document.getElementById('srt').textContent)`, 30000), 'seleção sem aviso'); await E(`window.fetch=window.__f;clearQ()`); });
@@ -248,7 +289,8 @@ if (G('analise')) {
       return{e,total:M.total,cells:M.cells.length,zs:M.zs.length,wins:bt.wins.length,metodo:M.metodo.nome,melhor:bt.res&&bt.res.bruto,hits:bt.res&&Object.fromEntries(Object.entries(bt.res.st).map(([k,x])=>[k,+x.hit.toFixed(1)])),vol:v.wape,vm:M.vm}})()`);
     ok(!r.e.length, r.e.join(' | ')); note('modelo', `${r.cells} células, ${r.zs} zonas, total ${r.total.toFixed(1)}, ${r.wins} janelas, método em uso: ${r.metodo}`); note('backtest (acerto % por método)', JSON.stringify(r.hits) + ' | maior acerto bruto: ' + r.melhor); note('volume (WAPE)', JSON.stringify(r.vol) + ' → ' + r.vm); });
   await T('método manual: cada método do backtest é aplicável; volume total independe do método', async () => {
-    const ids = await E('S.pm.bt.mets.map(m=>m.id)'); const tot0 = await E('S.pm.total'); for (const id of ids) { await E(`__h.set('pmm','${id}')`); ok(await E(`S.pm.metodo.id==='${id}'&&S.pm.auto===false&&S.pm.zs.length>0`), 'método ' + id); ok(near(await E('S.pm.total'), tot0, 1e-6), 'volume mudou com o método ' + id); }
+    const ids = await E('S.pm.bt.mets.filter(m=>!m.ref).map(m=>m.id)'); const tot0 = await E('S.pm.total'); for (const id of ids) { await E(`__h.set('pmm','${id}')`); ok(await E(`S.pm.metodo.id==='${id}'&&S.pm.auto===false&&S.pm.zs.length>0`), 'método ' + id); ok(near(await E('S.pm.total'), tot0, 1e-6), 'volume mudou com o método ' + id); }
+    await E(`document.getElementById('pmm').innerHTML+='<option value="P">P</option><option value="E">E</option>'`); for (const id of ['P', 'E']) { await E(`__h.set('pmm','${id}')`); ok(await E('!S.pm.metodo.ref&&S.pm.zs.length>0&&Number.isFinite(S.pm.total)&&S.pm.E.every(Number.isFinite)'), 'método de comparação gerou o mapa: ' + id); }
     await E(`__h.set('pmm','auto')`); ok(await E('S.pm.auto===true')); });
   await T('painel lista método, intervalos 80% e relatório recebe backtest', async () => { const t = await E(`document.getElementById('pml').textContent`); ok(/Intervalo 80%/.test(t) && /método:/.test(t), 'texto'); ok(await E('!!S.rep.backtest&&!!S.rep.backtestVolume&&S.rep.zonasPrev.h.includes("Intervalo 80%")'), 'relatório'); });
   await T('mapa de predição: pan, zoom (roda e botões), hover, clique em zona, Esc', async () => {
@@ -341,6 +383,10 @@ if (G('csv')) {
   await T('campos entre aspas com vírgula no meio', async () => { await fresh(); const r = await imp('lat,lng,tipo,hora,data\n-19.92,-43.94,"roubo, a pessoa",10,2026-03-15\n'); ok(r.loaded && r.n === 1, 'n=' + r.n + ' ' + r.toast); });
   await T('linhas curtas / hora 99 / lat de texto: aceita só as válidas, avisa o resto', async () => { await fresh(); const r = await imp(hdr + '-19.92,-43.94\n-19.93,-43.95,roubo,99,2026-03-15\nabc,def,roubo,10,2026-03-15\n-19.94,-43.96,roubo,10,2026-03-15\n'); ok(!r.errs.length, r.errs.join()); ok(r.loaded, r.toast); ok(await E('S.all.every(p=>p.h>=0&&p.h<=23)'), 'hora fora de 0-23'); note('linhas ruins', r.n + ' pontos aceitos de 4 linhas; ' + r.toast.slice(0, 120)); });
   await T('20.000 linhas: tempo de importação (inclui atribuição a polígonos e gravação local)', async () => { await fresh(); const rows = Array.from({length: 20000}, (_, i) => `${-19.95 + Math.random() * .15},${-43.99 + Math.random() * .1},roubo,${i % 24},2026-0${1 + i % 9}-1${i % 9}`).join('\n'); const t0 = Date.now(); await imp(hdr + rows, {espera: 100}); ok(await until(page, 'S.all.length===20000', 60000), 'não importou'); note('import 20k', (Date.now() - t0) + ' ms'); });
+  await T('idade e dia da semana de uma data não dependem da hora do dia (00:10, 12:00, 14:44, 23:50)', async () => {
+    const r = await E(`(()=>{const real=Date.now,o=[];try{for(const [h,m] of [[0,10],[12,0],[14,44],[23,50]]){Date.now=()=>new Date(2026,10,5,h,m).getTime();const ts=y=>new Date(2026,10,y).getTime(),a=agoDe(ts(5)),b=agoDe(ts(1)),sex=agoDe(ts(6-4)),p={ago:agoDe(ts(30-1))};
+      o.push({h,hoje:a,dia1:b,wd:new Date(Date.now()-agoDe(ts(2))*864e5).getDay(),iso:isoLocal(new Date(Date.now()-agoDe(ts(2))*864e5)),ym:mkDate(agoDe(ts(1))).dm})}}finally{Date.now=real}return o})()`);
+    ok(r.every(x => x.hoje === 0 && x.dia1 === 4 && x.wd === 1 && x.iso === '2026-11-02' && x.ym === 1), JSON.stringify(r)); });
   await T('datas antigas (>1 ano) e futuras: sem NaN', async () => { await fresh(); const r = await imp(hdr + '-19.92,-43.94,roubo,10,2019-03-15\n-19.93,-43.95,roubo,10,2031-03-15\n-19.94,-43.96,roubo,10,2026-03-15\n'); ok(r.loaded); note('idade (dias) de datas 2019/2031/2026', await E('S.all.map(p=>p.ago).join()')); const b = await bad(); ok(!b.length, b.join()); ok(await E('S.all.every(p=>p.ago>=0)'), 'idade negativa'); });
   await T('base importada é salva no navegador: cartão, restaurar após recarregar e apagar', async () => {
     await fresh(); const rows = Array.from({length: 300}, (_, i) => `${-19.95 + (i * 7919 % 100) * .0013},${-43.99 + (i * 104729 % 100) * .0009},${['roubo', 'furto'][i % 2]},${i % 24},2026-0${1 + i % 9}-1${i % 9}`).join('\n');
@@ -608,6 +654,24 @@ if (G('previsao')) {
   await T('horário e dia prováveis: foco que só ocorre às 22h de sexta-feira é apontado como tal', async () => {
     const r = await carregar(`let n=0;for(let a=0;a<360&&n<500;a++){const d=new Date(Date.now()-a*864e5);if(d.getDay()!==5)continue;for(let k=0;k<10;k++){n++;L.push([(-19.93+(Math.random()+Math.random()-1)*.004).toFixed(5),(-43.94+(Math.random()+Math.random()-1)*.004).toFixed(5),'roubo',22,d.toISOString().slice(0,10)].join(','))}}for(let i=0;i<400;i++){const a=Math.floor(Math.random()*360);L.push([(-19.99+Math.random()*.18).toFixed(5),(-44.02+Math.random()*.15).toFixed(5),'furto',Math.floor(Math.random()*24),${dia('a')}].join(','))}`, 'sexta.csv');
     ok(r, 'sem modelo'); const z = await E(`(()=>{const q=S.pm.zs[0];return{hora:q.perfil.hora,dia:q.perfil.dia,diaPct:q.perfil.diaPct,horaPct:q.perfil.horaPct}})()`); ok(/^(20|21|22)h–/.test(z.hora), 'hora provável ' + z.hora); ok(z.dia === 'sexta', 'dia provável ' + z.dia); ok(z.diaPct >= 60, 'participação baixa ' + z.diaPct); });
+  await T('literatura: ETAS (Mohler 2011) recupera os parâmetros de um processo auto-excitante simulado (θ=0,5; vida 5 d; σ=100 m)', async () => {
+    const r = await E(`(()=>{let s=7;const rnd=()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296},gauss=()=>Math.sqrt(-2*Math.log(rnd()+1e-12))*Math.cos(2*Math.PI*rnd());
+      const T=360,th=.5,om=1/5,sg=100,ev=[];const fila=[];for(let i=0;i<500;i++)fila.push({t:rnd()*T,x:(rnd()-.5)*8000,y:(rnd()-.5)*8000});
+      while(fila.length){const e=fila.pop();if(e.t>=T)continue;ev.push(e);let L=Math.exp(-th),k=0,p=1;do{k++;p*=rnd()}while(p>L);for(let c=0;c<k-1;c++)fila.push({t:e.t+(-Math.log(1-rnd())/om),x:e.x+gauss()*sg,y:e.y+gauss()*sg})}
+      const P=ev.map(e=>({x:e.x,y:e.y,ago:Math.floor(T-e.t),t:'Roubo',h:12,b:'x',r:0})),G={cs:200,x0:-4500,y0:-4500,nx:45,ny:45,n:2025},q=mkQT();P.forEach(p=>q.ins(p));
+      const o=btEscoreETAS({tr:P,G,cut:0,W:14});return{n:P.length,th:o.par.th,vida:1/o.par.om,sg:o.par.sg,fin:Array.from(o.s).every(Number.isFinite)&&o.s.some(v=>v>0)}})()`);
+    ok(r.n > 800 && r.fin, JSON.stringify(r)); ok(Math.abs(r.th - 0.5) < 0.1, 'θ estimado ' + r.th.toFixed(3)); ok(Math.abs(r.vida - 5) < 1.5, 'vida média estimada ' + r.vida.toFixed(2) + ' d'); ok(Math.abs(r.sg - 100) < 25, 'σ estimado ' + r.sg.toFixed(1) + ' m');
+    note('ETAS em dados simulados', `θ=${r.th.toFixed(3)} (0,5), vida=${r.vida.toFixed(2)} d (5), σ=${r.sg.toFixed(1)} m (100)`); });
+  await T('literatura: Prospective hot-spotting (Bowers 2004) pontua o foco recente e ignora o que é antigo ou longe (>400 m, >60 d)', async () => {
+    const r = await E(`(()=>{const P=[];for(let i=0;i<30;i++)P.push({x:(i%5)*30,y:Math.floor(i/5)*30,ago:1+i%6,t:'Roubo',h:1,b:'x',r:0});for(let i=0;i<30;i++)P.push({x:4000+(i%5)*30,y:Math.floor(i/5)*30,ago:200+i,t:'Roubo',h:1,b:'x',r:0});
+      const G={cs:200,x0:-1000,y0:-1000,nx:30,ny:10,n:300},q=mkQT();P.forEach(p=>q.ins(p));const s=btEscoreProspectivo({q,G,cut:0}).s,at=(x,y)=>s[Math.floor((x-G.x0)/G.cs)*G.ny+Math.floor((y-G.y0)/G.cs)];
+      return{recente:at(60,60),antigo:at(4060,60),longe:at(2000,60),perto:at(500,60),cmp:at(60,60)>at(500,60)}})()`);
+    ok(r.recente > 0 && r.antigo === 0 && r.longe === 0, JSON.stringify(r)); ok(r.cmp, 'o risco não cai com a distância: ' + JSON.stringify(r)); });
+  await T('literatura: backtest compara P e E com os métodos do app (PAI, PEI ∈ [0,1]); só comparação: fora do seletor e da escolha automática', async () => {
+    await fresh(); await E(`pmOpen()`); await sleep(1500);
+    const r = await E(`(()=>{const bt=S.pm.bt,st=bt.res&&bt.res.st,ids=bt.mets.map(m=>m.id);return{ids,tem:!!st&&['P','E'].every(k=>st[k]),pei:st?bt.mets.map(m=>st[m.id].pei):[],pai:st?bt.mets.map(m=>st[m.id].pai):[],ref:bt.mets.filter(m=>m.ref).map(m=>m.id),melhor:bt.res&&bt.res.melhor,sel:[...document.getElementById('pmm').options].map(o=>o.value),tx:document.getElementById('pr')?document.getElementById('pr').textContent:'',rel:S.rep.backtest&&S.rep.backtest.h.join('|'),par:bt.res&&bt.res.par}})()`);
+    ok(r.tem && r.ref.join() === 'P,E', JSON.stringify(r.ids)); ok(r.pei.every(v => v >= 0 && v <= 1) && r.pai.every(v => v >= 0), 'PEI/PAI fora da faixa: ' + r.pei); ok(!['P', 'E'].includes(r.melhor), 'o automático escolheu um método só de comparação'); ok(!r.sel.includes('P') && !r.sel.includes('E'), 'P/E apareceram no seletor: ' + r.sel);
+    ok(/PEI/.test(r.rel) && r.par && r.par.E && r.par.E.th >= 0.01 && r.par.E.th <= 0.95, 'relatório/parâmetros: ' + r.rel + JSON.stringify(r.par)); note('backtest com a literatura', 'PEI por método: ' + r.ids.map((id, i) => id + '=' + r.pei[i].toFixed(2)).join(' ')); });
   await T('base sem datas: previsão usa horizonte curto, não inventa dia da semana e não gera NaN', async () => {
     await carregar(`for(let i=0;i<400;i++){L.push([(-19.93+(Math.random()+Math.random()-1)*.02).toFixed(5),(-43.94+(Math.random()+Math.random()-1)*.02).toFixed(5),'roubo',i%24,''].join(','))}`, 'semdata.csv'); const r = await E(`({W:S.pm.W,datas:S.pm.datas,dias:S.pm.zs.map(z=>z.perfil.dia)})`); ok(r.W === 7 && !r.datas && r.dias.every(d => d === null), JSON.stringify(r)); const b = await bad(); ok(!b.length, b.join()); });
 }
@@ -730,6 +794,96 @@ if (G('relatorio')) {
     ok(p.n >= 3 && p.h.length === 1 && p.h[0] === 296.5 && p.w.length === 1 && p.w[0] === 210 && p.sombra === 'none', JSON.stringify(p)); await E(`document.getElementById('r_padrao').click()`); await sleep(500); });
   for (const vp of [[1400, 850, false], [390, 844, true]]) await T(`[${vp[0]}x${vp[1]}] editor sem rolagem horizontal; prévia e controles acessíveis`, async () => {
     await fresh('', vp); await abre(); const r = await E(`(()=>{const v=document.getElementById('vr');return{h:v.scrollWidth>v.clientWidth+1,doc:document.documentElement.scrollWidth>innerWidth+1,cfg:!!document.getElementById('rcfg').getBoundingClientRect().width,prev:document.getElementById('rpaper').getBoundingClientRect().width>200}})()`); ok(!r.h && !r.doc && r.cfg && r.prev, JSON.stringify(r)); await page.shot(path.join(OUT, `relatorio_${vp[0]}x${vp[1]}.png`)); });
+}
+
+/* =============== 21. BASES DE TESTE (CENÁRIOS SINTÉTICOS) =============== */
+if (G('cenarios')) {
+  await fresh();
+  await T('cenários: 5 opções, cada uma com descrição; mudar o seletor troca o texto', async () => {
+    const r = await E(`(()=>{const s=document.getElementById('bts'),d=[];for(const o of s.options){s.value=o.value;s.dispatchEvent(new Event('change'));d.push(document.getElementById('btd').textContent)}return{ids:[...s.options].map(o=>o.value),d}})()`);
+    ok(r.ids.join() === 'estacionario,deriva,contagio,sazonal,carnaval', r.ids.join()); ok(new Set(r.d).size === 5 && r.d.every(x => x.length > 60), 'descrições'); });
+  await T('cenários: determinísticos (mesma semente = mesmos dados), registros válidos e dentro de BH', async () => {
+    const r = await E(`(()=>{const o={};for(const id of Object.keys(BASES_TESTE)){const c=BASES_TESTE[id],a=c.gerar(5),b=c.gerar(5),d=c.gerar(6),h=x=>x.pontos.slice(0,200).map(p=>p.x.toFixed(2)+p.ago+p.t+p.h).join('|');
+      const P=a.pontos;o[id]={n:P.length,igual:h(a)===h(b)&&a.pontos.length===b.pontos.length,difere:h(a)!==h(d),dias:c.dias,
+       ok:P.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.ago>=0&&p.ago<c.dias&&p.h>=0&&p.h<24&&T[p.t]&&p.r>=0&&p.r<RG.length&&Number.isFinite(p.ym)),
+       bb:P.every(p=>{const la=LAT0+p.y/KY,ln=LNG0+p.x/KX;return la>BB.la[0]&&la<BB.la[1]&&ln>BB.ln[0]&&ln<BB.ln[1]})}}return o})()`);
+    for (const [id, x] of Object.entries(r)) { ok(x.igual && x.difere, id + ': semente'); ok(x.ok && x.bb, id + ': registros inválidos'); }
+    ok(r.estacionario.n === 4000 && r.deriva.n === 4000 && r.sazonal.n === 5000, 'tamanhos'); ok(r.contagio.n > 3000 && r.contagio.n < 5200, 'contágio: ' + r.contagio.n); ok(r.carnaval.n > 7000 && r.carnaval.n < 8000, 'carnaval: ' + r.carnaval.n);
+    note('tamanho dos cenários', Object.entries(r).map(([k, v]) => k + '=' + v.n).join(' ')); });
+  await T('contágio: o ETAS (Mohler 2011) recupera θ=0,6, vida 4 d e σ=120 m plantados no cenário', async () => {
+    const r = await E(`(()=>{const o=BASES_TESTE.contagio.gerar(1),P=o.pontos,G=btGrade(P,500),q=mkQT();P.forEach(p=>q.ins(p));const e=btEscoreETAS({tr:P,G,cut:0,W:30});return{th:e.par.th,vida:1/e.par.om,sg:e.par.sg,v:o.verdade}})()`);
+    ok(Math.abs(r.th - 0.6) < 0.12, 'θ ' + r.th.toFixed(3)); ok(Math.abs(r.vida - 4) < 1.2, 'vida ' + r.vida.toFixed(2)); ok(Math.abs(r.sg - 120) < 25, 'σ ' + r.sg.toFixed(1)); ok(r.v.theta === 0.6 && r.v.vidaDias === 4 && r.v.sigmaM === 120, 'verdade registrada');
+    note('contágio: ETAS estimado', `θ=${r.th.toFixed(2)} (0,6) vida=${r.vida.toFixed(1)} d (4) σ=${r.sg.toFixed(0)} m (120)`); });
+  await T('deriva: o foco móvel anda de Barreiro a Venda Nova (≥ 8 km entre os 6 primeiros e os 6 últimos meses)', async () => {
+    const r = await E(`(()=>{const P=BASES_TESTE.deriva.gerar(1).pontos.filter(p=>p.b==='Foco móvel'),m=a=>({x:a.reduce((s,p)=>s+p.x,0)/a.length,y:a.reduce((s,p)=>s+p.y,0)/a.length}),a=m(P.filter(p=>p.ago>=548)),b=m(P.filter(p=>p.ago<182));return{n:P.length,km:Math.hypot(a.x-b.x,a.y-b.y)/1000}})()`);
+    ok(r.n > 1400 && r.n < 1800, 'fração do foco móvel: ' + r.n); ok(r.km >= 8, 'deslocamento ' + r.km.toFixed(1) + ' km'); });
+  await T('sazonal: perto dos focos da estação há ≥ 2× mais registros do que perto dos mesmos focos fora da estação', async () => {
+    const r = await E(`(()=>{const o=BASES_TESTE.sazonal.gerar(1),P=o.pontos,est=m=>m===11||m<=1?0:m<=4?1:m<=7?2:3,perto=(p,n)=>{const c=CEN.find(x=>x[0]===n);return Math.hypot(p.x-(c[2]-LNG0)*KX,p.y-(c[1]-LAT0)*KY)<2000};let dentro=0,fora=0,nd=0,nf=0;
+      for(const p of P){const e=est(p.ym%12);o.verdade.estacoes.forEach((s,k)=>{const h=s.focos.some(n=>perto(p,n));if(k===e){nd++;if(h)dentro++}else{nf++;if(h)fora++}})}return{dentro:dentro/nd,fora:fora/nf}})()`);
+    ok(r.dentro > 2 * r.fora, JSON.stringify(r)); });
+  await T('carnaval: datas pela Páscoa (terça de Carnaval), 4 dias de sábado a terça, e ≥ 2,5× mais registros nas zonas de festa', async () => {
+    const r = await E(`(()=>{const o=BASES_TESTE.carnaval.gerar(1),V=o.verdade,P=o.pontos,Z=V.zonas.map(n=>CEN.find(c=>c[0]===n)),naZona=p=>Z.some(c=>Math.hypot(p.x-(c[2]-LNG0)*KX,p.y-(c[1]-LAT0)*KY)<2000),
+      ter=V.janelas.map(j=>({ano:j.ano,dow:new Date(j.data+'T12:00:00').getDay(),data:j.data,larg:j.inicioAgo-j.fimAgo,cut:j.cut,W:j.W}));
+      const emCar=new Set();V.janelas.forEach(j=>{for(let a=j.fimAgo;a<=j.inicioAgo;a++)emCar.add(a)});const nc=[...emCar].length;let c1=0,c0=0;
+      for(const p of P)if(naZona(p)&&(p.h>=20||p.h<=4)){if(emCar.has(p.ago))c1++;else c0++}
+      return{ter,razao:(c1/nc)/(c0/(V.dias-nc)),n:V.janelas.length,pascoa:{p26:pascoa(2026).toISOString().slice(0,10),p25:pascoa(2025).toISOString().slice(0,10),p24:pascoa(2024).toISOString().slice(0,10)}}})()`);
+    ok(r.n >= 4 && r.n <= 6, 'janelas: ' + r.n); ok(r.ter.every(x => x.dow === 2 && x.larg === 3 && x.W === 4), 'terça/4 dias: ' + JSON.stringify(r.ter.map(x => [x.data, x.dow, x.larg])));
+    const dt = Object.fromEntries(r.ter.map(x => [x.ano, x.data])); for (const [a, d] of [[2022, '2022-03-01'], [2023, '2023-02-21'], [2024, '2024-02-13'], [2025, '2025-03-04'], [2026, '2026-02-17']]) if (dt[a]) ok(dt[a] === d, 'Carnaval ' + a + ': ' + dt[a] + ' ≠ ' + d);
+    ok(r.razao >= 2.5, 'razão festa/normal ' + r.razao.toFixed(2)); note('carnaval', `datas ${Object.values(dt).join(', ')}; registros nas zonas de festa à noite: ${r.razao.toFixed(1)}× o normal`); });
+  await T('carnaval: o Carnaval muda de data, então "mesmo período do ano anterior" (365 d) cai fora da festa e perde para o histórico', async () => {
+    const r = await E(`(()=>{const o=BASES_TESTE.carnaval.gerar(1),P=o.pontos,V=o.verdade,js=V.janelas.filter(j=>j.historicoDias>=400),desl=js.slice(1).map((j,i)=>Math.abs((j.inicioAgo-js[i].inicioAgo)%365)),G=btGrade(P,500),mets=btMetodos(45,btSpan(P),4),w=js.map(j=>btJanela(P,G,500,j.cut,mets,4)).filter(Boolean),m=id=>w.reduce((s,x)=>s+x.res[id].hit,0)/w.length;
+      return{n:w.length,Z:m('Z'),B:m('B'),E:m('E'),desl}})()`);
+    ok(r.n >= 3, 'janelas válidas: ' + r.n); ok(r.B > r.Z + 20, 'Z ' + r.Z.toFixed(1) + ' vs B ' + r.B.toFixed(1)); ok(r.E > r.Z + 20, 'E ' + r.E.toFixed(1)); note('carnaval: acerto médio', `Z(mesmo período do ano anterior)=${r.Z.toFixed(1)}% B(histórico)=${r.B.toFixed(1)}% ETAS=${r.E.toFixed(1)}%`); });
+  await T('botão "Gerar e carregar": carrega o cenário, mostra o nome na origem, prevê sem NaN; carregar outra base limpa o cenário', async () => {
+    await E(`(()=>{const s=document.getElementById('bts');s.value='contagio';s.dispatchEvent(new Event('change'));document.getElementById('btsd').value=3;document.getElementById('btg').click()})()`);
+    ok(await E(`S.cenario&&S.cenario.id==='contagio'&&S.cenario.seed===3&&S.all.length>3000&&/cenário: Contágio/.test(document.getElementById('src').textContent)`), 'não carregou'); ok(await E(`document.querySelectorAll('.toast, #ts *').length>=0`));
+    await E('pmOpen()'); await sleep(1500); ok(await E('!!S.pm&&!!S.pm.bt.res&&S.pm.bt.res.par.E&&S.pm.bt.res.par.E.th>0.3'), 'previsão/ETAS no contágio'); const b = await bad(); ok(!b.length, b.join());
+    await E(`document.getElementById('regen').click()`); ok(await E('S.cenario===null&&/sintético/.test(document.getElementById("src").textContent)'), 'cenário não foi limpo'); });
+}
+
+/* =============== 22. COMPARAÇÃO DE ALGORITMOS (ESTATÍSTICA, RECORTE QUADTREE, TELA) =============== */
+if (G('comparacao')) {
+  await fresh();
+  await T('estatística: Wilcoxon exato (n=5 → p=0,0625; n=10 → 2/1024; n=6 misto → 27/64×2), zeros descartados, empates e n grande por aproximação normal', async () => {
+    const r = await E(`(()=>({a:wilcoxon([1,2,3,4,5]),b:wilcoxon([1,2,3,4,5,6,7,8,9,10]),c:wilcoxon([1,-2,3,-4,5,-6]),z:wilcoxon([0,0,0]),zz:wilcoxon([0,1,2,3,4,5]),e:wilcoxon([1,1,2,2,3]),g:wilcoxon(Array.from({length:26},(_,i)=>i+1)),h:wilcoxon(Array.from({length:40},(_,i)=>(i%2?1:-1)*(i+1)*(1+(i%3)*0.01)))}))()`);
+    ok(near(r.a.p, 0.0625, 1e-12) && r.a.exato, 'n=5: ' + r.a.p); ok(near(r.b.p, 2 / 1024, 1e-12), 'n=10: ' + r.b.p); ok(near(r.c.p, 0.84375, 1e-12), 'misto: ' + r.c.p); ok(r.z.p === 1 && r.z.n === 0, 'só zeros'); ok(r.zz.n === 5 && near(r.zz.p, 0.0625, 1e-12), 'zeros descartados');
+    ok(!r.e.exato && r.e.p > 0 && r.e.p <= 1, 'empates: ' + JSON.stringify(r.e)); ok(!r.g.exato && r.g.p < 1e-4, 'n=26: ' + r.g.p); ok(r.h.p > 0.2 && r.h.p <= 1, 'simétrico n=40: ' + r.h.p); });
+  await T('estatística: Holm, bootstrap (determinístico, contém a média) e normal acumulada', async () => {
+    const r = await E(`(()=>{const d=Array.from({length:40},(_,i)=>(i%7)-2.5+(i%2)*0.3),m=d.reduce((a,b)=>a+b,0)/d.length,a=bootIC(d),b=bootIC(d),c=bootIC([2,2,2,2]);return{h:holm([0.01,0.04,0.03]),h2:holm([0.5]),h3:holm([0.001,0.001,0.9]),ic:a,igual:a[0]===b[0]&&a[1]===b[1],m,c,phi:[cmpPhi(0),cmpPhi(1.96),cmpPhi(-1.96)],unico:bootIC([1])}})()`);
+    ok(r.h.every((v, k) => near(v, [0.03, 0.06, 0.06][k], 1e-12)), 'Holm: ' + r.h); ok(r.h2[0] === 0.5 && near(r.h3[0], 0.003, 1e-12) && r.h3[2] <= 1 && r.h3[2] >= 0.9, 'Holm 2: ' + r.h3);
+    ok(r.igual && r.ic[0] < r.m && r.m < r.ic[1] && r.ic[1] - r.ic[0] < 2, 'bootstrap: ' + r.ic + ' média ' + r.m); ok(r.c[0] === 2 && r.c[1] === 2, 'constante'); ok(near(r.phi[0], 0.5, 1e-7) && near(r.phi[1], 0.975, 1e-4) && near(r.phi[2], 0.025, 1e-4), 'Φ: ' + r.phi); ok(r.unico.every(v => v === null || Number.isNaN(v)), 'n<2: ' + r.unico); });
+  await T('recorte QuadTree: usa o mesmo orçamento de área da grade (≤5%), PAI = acerto ÷ área, PEI em [0,1]; sem opt.qt o backtest não muda', async () => {
+    const r = await E(`(()=>{const o=BASES_TESTE.contagio.gerar(1),P=o.pontos,salvo=[S.all,S.box,S.bb,S.area];try{S.all=P;setBox();const R=500,G=btGrade(P,R),mets=btMetodos(45,btSpan(P),30),a=btJanela(P,G,R,60,mets,30),b=btJanela(P,G,R,60,mets,30,{qt:true});
+      const m=mets.map(x=>b.res[x.id]);return{semQT:Object.keys(a.res.B).join(),comQT:Object.keys(b.res.B).join(),igual:mets.every(x=>a.res[x.id].hit===b.res[x.id].hit&&a.res[x.id].pei===b.res[x.id].pei),
+        area:m.map(x=>x.areaQ),hit:m.map(x=>x.hitQ),pei:m.map(x=>x.peiQ),pai:m.map(x=>x.paiQ),idp:m.every(x=>Math.abs(x.paiQ-x.hitQ/(x.areaQ*100))<1e-9),nf:b.nQT,gn:G.n}}finally{[S.all,S.box,S.bb,S.area]=salvo}})()`);
+    ok(r.semQT === 'hit,pai,pei' && /hitQ,paiQ,peiQ,areaQ/.test(r.comQT), 'campos: ' + r.semQT + ' | ' + r.comQT); ok(r.igual, 'o recorte alterou a avaliação da grade');
+    ok(r.area.every(a => a <= 0.05 + 1e-9 && a >= 0.03), 'área fora do orçamento: ' + r.area.map(a => a.toFixed(4))); ok(r.hit.every(h => h >= 0 && h <= 100) && r.pei.every(p => p >= 0 && p <= 1.0000001) && r.idp, 'faixas/identidade do PAI'); ok(r.nf > 50, 'poucas folhas: ' + r.nf);
+    note('recorte QuadTree', r.nf + ' folhas; área usada ' + (r.area.reduce((a, b) => a + b, 0) / r.area.length * 100).toFixed(2) + '% (orçamento 5%)'); });
+  await T('recorte QuadTree: pontuação-oráculo (contagem real do teste) fica perto do máximo; pontuação invertida acerta menos que o oráculo', async () => {
+    const r = await E(`(()=>{const o=BASES_TESTE.estacionario.gerar(2),P=o.pontos,salvo=[S.all,S.box,S.bb,S.area];try{S.all=P;setBox();const R=500,G=btGrade(P,R),cut=60,W=30,tr=P.filter(p=>p.ago>=cut),te=P.filter(p=>p.ago>=cut-W&&p.ago<cut),q=mkQT();tr.forEach(p=>q.ins(p));
+      const cel=p=>{const i=Math.floor((p.x-G.x0)/G.cs),j=Math.floor((p.y-G.y0)/G.cs);return i>=0&&j>=0&&i<G.nx&&j<G.ny?i*G.ny+j:-1},tev=te.filter(p=>cel(p)>=0),S1=new Float32Array(G.n);tev.forEach(p=>S1[cel(p)]++);
+      const Q=btRecorteQT(q,G,tev,.05),or=Q.avaliar(S1),inv=Q.avaliar(S1.map(v=>-v)),nul=Q.avaliar(new Float32Array(G.n));return{or,inv,nul}}finally{[S.all,S.box,S.bb,S.area]=salvo}})()`);
+    ok(r.or.peiQ >= 0.55, 'oráculo PEI ' + r.or.peiQ.toFixed(2)); ok(r.or.hitQ > r.inv.hitQ + 15, 'oráculo ' + r.or.hitQ.toFixed(1) + ' vs invertida ' + r.inv.hitQ.toFixed(1)); ok(r.nul.hitQ >= 0 && r.nul.hitQ <= 100 && Number.isFinite(r.nul.paiQ), 'pontuação nula'); });
+  await T('aba Comparação: 4ª vista; "Cenários de teste" roda, mostra 5 cartões com tabelas, restaura a base e a caixa do app, sem NaN', async () => {
+    const antes = await E(`({n:S.all.length,p0:S.all[0].x,box:JSON.stringify(S.box),area:S.area,src:document.getElementById('src').textContent,qt:S.lv.length})`);
+    await E(`document.querySelector('#vt [data-v=cmp]').click()`); await sleep(300); ok(await E(`document.body.dataset.v==='cmp'&&!document.getElementById('vcmp').hidden&&document.getElementById('vd').hidden&&document.getElementById('vr').hidden&&[...document.querySelectorAll('#vt button')].length===4`), 'vista');
+    ok(await E(`/Rodar comparação/.test(document.getElementById('vcr').textContent)&&/Escolha a fonte/.test(document.getElementById('vcx').textContent)`), 'tela inicial');
+    await E(`document.getElementById('vcn').value=1;document.getElementById('vcr').click()`); ok(await E(`document.getElementById('vcr').textContent==='Parar'&&CMP.rodando===true`), 'botão não virou "Parar"'); ok(await until(page, `!CMP.rodando&&document.querySelectorAll('#vcx .cmpc').length===5`, 300000), 'comparação não terminou');
+    const r = await E(`(()=>{const cs=[...document.querySelectorAll('#vcx .cmpc')];return{n:cs.length,lin:cs.map(c=>c.querySelectorAll('table tr').length),col:cs.map(c=>c.querySelectorAll('table tr:nth-child(2) td').length),txt:document.getElementById('vcs').textContent,prog:document.getElementById('vcp').textContent,btn:document.getElementById('vcr').textContent,rep:!!S.rep.compAlg&&S.rep.compAlg.r.length,res:CMP.res.resumo,
+      depois:{n:S.all.length,p0:S.all[0].x,box:JSON.stringify(S.box),area:S.area,src:document.getElementById('src').textContent,qt:S.lv.length}}})()`);
+    ok(r.n === 5 && r.lin.every(l => l >= 10) && r.col.every(c => c === 11), JSON.stringify({lin: r.lin, col: r.col})); ok(/combinações/.test(r.txt) && /Concluído/.test(r.prog) && r.btn === 'Rodar comparação', r.txt + ' | ' + r.prog); ok(r.rep >= 40, 'tabela do relatório: ' + r.rep);
+    ok(JSON.stringify(r.depois) === JSON.stringify(antes), 'a comparação alterou a base/caixa do app: ' + JSON.stringify([antes, r.depois]).slice(0, 300)); const b = await bad(); ok(!b.length, b.join());
+    note('comparação (1 semente)', r.txt.replace(/<[^>]+>/g, '')); });
+  await T('aba Comparação: CSV com colunas iguais, linha-resumo e legenda; botão "Parar" interrompe e devolve resultado parcial', async () => {
+    await E(`window.__blobs.length=0;document.getElementById('vcc').click()`); const csv = await E(`window.__blobs.at(-1).text()`); const L = csv.replace('﻿', '').trim().split('\n');
+    ok(/^"Cenário";"Método"/.test(L[0]) && L.length > 40, 'cabeçalho: ' + L[0]); ok(L.every(l => l.split('";"').length === L[0].split('";"').length), 'colunas desiguais'); ok(!/NaN|undefined|Infinity/.test(csv), 'NaN no CSV');
+    await E(`document.getElementById('vcn').value=3;document.getElementById('vcr').click()`); await sleep(2500); await E(`document.getElementById('vcr').click()`); ok(await until(page, `!CMP.rodando`, 120000), 'não parou');
+    const r = await E(`({parou:CMP.res.params.parou,n:CMP.res.cenarios.length,txt:document.getElementById('vcp').textContent})`); ok(r.parou && r.n >= 1 && r.n < 5 && /interrompido/.test(r.txt), JSON.stringify(r)); });
+  await T('aba Comparação: "Base carregada" roda só nela (campo de sementes some) e o relatório ganha a seção "Comparação de algoritmos"', async () => {
+    await E(`document.querySelector('#vcf [data-f=carregada]').click()`); ok(await E(`document.getElementById('vcn').closest('label').hidden===true`), 'campo de sementes visível'); await E(`document.getElementById('vcr').click()`);
+    ok(await until(page, `!CMP.rodando&&CMP.res&&CMP.res.cenarios.length===1&&CMP.res.params.fonte==='carregada'`, 120000), 'não terminou'); const r = await E(`({n:document.querySelectorAll('#vcx .cmpc').length,w:CMP.res.cenarios[0].n,id:CMP.res.cenarios[0].id})`); ok(r.n === 1 && r.w >= 2 && r.id === 'carregada', JSON.stringify(r));
+    await E(`document.querySelector('#vt [data-v=rel]').click()`); await sleep(900); const t = await E(`document.getElementById('rpaper').innerText`); ok(/Comparação de algoritmos/i.test(t) && /Wilcoxon/.test(t) && /Grade: acerto/.test(t), 'relatório sem a seção');
+    ok(await E(`!!document.querySelector('#rpaper .cap')&&[...document.querySelectorAll('#rpaper .cap')].some(c=>/Tabela \\d+ – Base|Tabela \\d+ – /.test(c.textContent))`), 'legenda de tabela'); await E(`window.__blobs.length=0;document.getElementById('rCsv').click()`); ok(/Comparação de algoritmos/.test(await E(`window.__blobs.at(-1).text()`)), 'CSV do relatório sem a tabela'); });
 }
 
 await page.close();

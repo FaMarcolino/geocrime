@@ -16,6 +16,7 @@
 <div class="row" id="nb"><button data-n="1000">1k</button><button data-n="3000" class="on">3k</button><button data-n="6000">6k</button><button data-n="20000">20k</button></div>
 <div class="row"><button id="regen">Regerar</button><label class="btn">Importar CSV<input id="file" type="file" accept=".csv" hidden></label></div>
 <div class="res" id="svd" hidden></div>
+<details class="sec" id="btx"><summary>Bases de teste (fictícias, com resposta conhecida)</summary><div class="sb"><label class="nf full"><small>Cenário</small><select id="bts"></select></label><div class="res" id="btd"></div><div class="row"><label class="nf"><small>Semente</small><input id="btsd" type="number" value="1" min="1"></label><button id="btg" class="pri">Gerar e carregar</button></div></div></details>
 <div style="color:var(--mu);font-size:11px">CSV: lat, lng, tipo, hora, data (aaaa-mm-dd ou dd/mm/aaaa). Um assistente deixa você conferir as colunas e a natureza antes de importar (aceita , ; tab, UTF-8 ou Windows-1252). Base sintética de 12 meses.</div>
 <h2>Pesquisa por região, natureza e época</h2>
 <div class="row"><select id="fr"><option value="">Todas as regiões</option></select><select id="ft"><option value="">Todas as naturezas</option><option value="Roubo">Roubo (CVP)</option><option>Furto</option><option value="CVLI">CVLI (homicídio)</option><option value="Veiculos">Roubo/Furto de Veículo</option></select></div>
@@ -54,10 +55,11 @@
 <button class="pri" id="go" style="width:100%">Distribuir bases e calcular cobertura</button>
 <div class="res" id="pp">Posiciona as bases de cada região (quantidade da tabela) e confere capacidade e custo.</div>
 <h2>Ronda preventiva</h2>
-<div class="fg"><label class="nf full"><small>Dividir por</small><select id="rq"></select></label><label class="nf"><small>Paradas por VTR</small><input id="rm" type="number" value="4" min="1" max="20"></label><label class="nf"><small>VTR por quadrante (máx.)</small><input id="rv" type="number" value="3" min="1" max="8"></label><label class="nf"><small>Turno (horas)</small><input id="rh" type="number" value="6" min="1" max="12" step="0.5"></label><label class="nf"><small>Minutos por parada</small><input id="rs" type="number" value="10" min="0" max="120"></label></div>
+<div class="fg"><label class="nf full"><small>Dividir por</small><select id="rq"></select></label><label class="nf"><small>Paradas por VTR</small><input id="rm" type="number" value="4" min="1" max="20"></label><label class="nf"><small>VTR por divisão (máx.)</small><input id="rv" type="number" value="3" min="1" max="8"></label><label class="nf" id="rnl" hidden><small>Nº de células (vazio = uma por viatura)</small><input id="rn" type="number" placeholder="uma por VTR" min="1" max="60"></label><label class="nf"><small>Turno (horas)</small><input id="rh" type="number" value="6" min="1" max="12" step="0.5"></label><label class="nf"><small>Minutos por parada</small><input id="rs" type="number" value="10" min="0" max="120"></label></div>
 <label><input type="checkbox" id="rl" checked> Sair e voltar à base</label>
+<label title="Divide cada região em territórios, um por viatura, e mantém cada rota dentro do seu. Mede quanto do trajeto pelas ruas sai do território e, se passar de 10%, tenta trajetos alternativos. A ida e a volta da base não contam."><input type="checkbox" id="rdn" checked> Uma subdivisão para cada viatura</label>
 <div class="row"><button id="rb" class="pri">Gerar rondas</button></div>
-<div class="res" id="rrs">Divide a área (regiões, quadrantes importados ou grade), distribui as manchas críticas entre as viaturas de cada quadrante e monta o percurso de cada VTR a partir da base, dentro do turno. Posicione as bases antes (Bases: capacidade e custo).</div>
+<div class="res" id="rrs">Divide a área (células da QuadTree, regiões, quadrantes importados ou grade), distribui as manchas críticas entre as viaturas de cada quadrante e monta o percurso de cada VTR a partir da base, dentro do turno. Posicione as bases antes (Bases: capacidade e custo).</div>
 </div>
 
 <div class="tp" id="t3">
@@ -93,7 +95,7 @@
 <header id="tbar">
 <button class="ib" id="hb" title="Mostrar/ocultar painel (P)" aria-label="Mostrar ou ocultar o painel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
 <span class="ws"><small>ÁREA DE TRABALHO</small><b>Centro de comando</b></span>
-<nav class="vt" id="vt" aria-label="Vistas"><button class="on" data-v="mapa">Mapa</button><button data-v="dash">Dashboard</button><button data-v="rel">Relatório</button></nav>
+<nav class="vt" id="vt" aria-label="Vistas"><button class="on" data-v="mapa">Mapa</button><button data-v="dash">Dashboard</button><button data-v="rel">Relatório</button><button data-v="cmp">Comparação</button></nav>
 <div class="sbx" role="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="q" type="search" placeholder="Buscar região, local ou ação…" autocomplete="off" aria-label="Buscar região, local ou ação" role="combobox" aria-expanded="false" aria-controls="qr"><kbd>Ctrl K</kbd><div class="qr card" id="qr" role="listbox" hidden></div></div>
 <span class="tr"><button class="ib" id="sbt" title="Buscar" aria-label="Abrir a busca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button><span class="dchip" id="dc" title="Origem dos dados"></span><button class="ib" id="fs" title="Tela cheia" aria-label="Tela cheia"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button><button class="ib" id="bl" title="Alertas" aria-label="Alertas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span class="bdg" id="bn" hidden>0</span></button></span>
 <div class="card" id="bp" hidden role="dialog" aria-label="Alertas"></div>
@@ -125,6 +127,7 @@
 <button class="pri" id="pmc" style="width:100%;margin-top:4px">← Voltar ao mapa de ocorrências</button></div>
 <div class="card pml" id="pml"></div>
 <div class="zb"><button id="pzi" title="Aproximar (+)">+</button><button id="pzo" title="Afastar (−)">−</button><button id="pzf" title="Enquadrar (F)">⌂</button></div></div><section id="vd" class="vista" hidden aria-label="Dashboard"><div class="vh"><div><small class="eb">ANÁLISE</small><h1>Dashboard</h1><p id="vds" class="mu"></p></div><div class="vc"><div class="seg" id="vde" role="group" aria-label="Quais registros"><button class="on" data-e="filtros">Filtros do mapa</button><button data-e="base">Toda a base</button></div><div class="seg" id="vdp" role="group" aria-label="Período"><button class="on" data-d="0">Tudo</button><button data-d="365">12 m</button><button data-d="180">6 m</button><button data-d="90">3 m</button><button data-d="30">30 d</button></div></div></div><div class="dg" id="vdc"></div></section>
+<section id="vcmp" class="vista" hidden aria-label="Comparação de algoritmos"><div class="vh"><div><small class="eb">VALIDAÇÃO</small><h1>Comparação de algoritmos</h1><p id="vcs" class="mu"></p></div><div class="vc"><div class="seg" id="vcf" role="group" aria-label="Fonte dos dados"><button class="on" data-f="cenarios">Cenários de teste</button><button data-f="carregada">Base carregada</button></div><label class="nf"><small>Sementes</small><input id="vcn" type="number" min="1" max="20" value="5"></label><button id="vcr" class="pri">Rodar comparação</button><button id="vcc">CSV</button></div></div><div id="vcp" class="mu" hidden></div><div id="vcx" class="cmpg"></div></section>
 <section id="vr" class="vista" hidden aria-label="Editor de relatório"><div class="vh"><div><small class="eb">RELATÓRIOS</small><h1>Editor de relatório</h1><p class="mu">Escolha o que entra, ordene, comente e escreva. A prévia ao lado é o que será exportado.</p></div><div class="vc"><button id="rPdf" class="pri">Exportar PDF</button><button id="rCsv">CSV das tabelas</button><button id="rHtml">Arquivo HTML</button></div></div><div class="rl"><div class="rcfg card" id="rcfg"></div><div class="rprev"><div class="prevfolhas" id="rpaper"></div></div></div></section>
 </main><div id="ts"></div>
 <div id="md" class="modal" hidden><div class="card mdc"><div class="ch"><b id="mdt"></b><button class="ic" id="mdx" title="Fechar (Esc)">×</button></div><div id="mdb"></div><div class="mdf"><button id="mdc">Cancelar</button><button class="pri" id="mdo">Importar</button></div></div></div>
@@ -144,10 +147,12 @@
 <script src="js/11-regioes-geojson.js"></script>
 <script src="js/12-planejador-de-rondas.js"></script>
 <script src="js/13-backtest-predicao.js"></script>
+<script src="js/13b-comparacao.js"></script>
 <script src="js/14-mapa-de-predicao.js"></script>
 <script src="js/15-graficos.js"></script>
 <script src="js/16-dashboard.js"></script>
 <script src="js/17-relatorio.js"></script>
 <script src="js/17b-relatorio-abnt.js"></script>
+<script src="js/17c-bases-de-teste.js"></script>
 <script src="js/18-ponte-powerapps.js"></script>
 <script src="js/19-inicializacao.js"></script></body></html>

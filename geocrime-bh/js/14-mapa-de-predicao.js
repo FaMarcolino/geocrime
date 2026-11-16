@@ -11,7 +11,7 @@ function pmPerfil(ns,datas){const h=Array(24).fill(0),d=Array(7).fill(0);for(con
 function pmModel(){const nt=$('pnt').value,pt=$('ppt').value,rg=$('fr').value,wg=$('pwg').checked,R=+$('R').value,HL=+$('hl').value||45,wv=p=>wg?T[p.t].w:1;
  const P=S.all.filter(p=>(!nt||p.t===nt)&&inPer(p.h,pt)&&(rg===''||p.r===+rg));if(P.length<50)return null;
  const bt=btCache(P,R,HL,wv,[nt,pt,rg,wg].join('|'),$('phz').value||'auto'),W=bt.W,sel=$('pmm').value||'auto',auto=sel==='auto',
-  id=auto?(bt.res?bt.res.melhor:'C'+HL):sel,metodo=bt.mets.find(m=>m.id===id)||bt.mets.find(m=>m.id==='C'+HL);
+  id=auto?(bt.res?bt.res.melhor:'C'+HL):sel,metodo=bt.mets.find(m=>m.id===id&&!m.ref)||bt.mets.find(m=>m.id==='C'+HL);/* P e E são só comparação: nunca geram o mapa */
  const q=mkQT();P.forEach(p=>q.ins(p));
  const[a,b,c,d]=bboxOf(P),cs=Math.max(R/2,150,Math.sqrt((c-a+2*R)*(d-b+2*R)/20000)),x0=a-R,y0=b-R,nx=Math.ceil((c-a+2*R)/cs),ny=Math.ceil((d-b+2*R)/cs),K=new Float32Array(nx*ny),rr=new Int8Array(nx*ny),sr=RG.map(()=>0);
  for(let i=0;i<nx;i++)for(let j=0;j<ny;j++){const cx=x0+(i+.5)*cs,cy=y0+(j+.5)*cs;let t=0;for(const p of q.rng(cx,cy,R,[],{v:0}))t+=wv(p)*btPeso(metodo,p,0,W)*(1-Math.hypot(p.x-cx,p.y-cy)/R);
@@ -35,7 +35,7 @@ function pmZonasHTML(M){const un=pUn();return M.zs.map((z,i)=>`<div class="hl zn
 function pmRelZonas(M){const un=pUn();S.rep.zonasPrev={h:['Zona','Rua','Local','Regional',`Previsto (${un}/${M.W} d)`,'Intervalo 80%','Chance de ≥1','Horário provável','Dia provável','Latitude','Longitude'],r:M.zs.map((z,i)=>['P'+(i+1),z.rua||'—',z.b||'—',z.r,f1(z.e),`${f1(z.lo)}–${f1(z.hi)}`,Math.round(z.prob*100)+'%',z.perfil.hora+' ('+z.perfil.horaPct+'%)',z.perfil.dia?z.perfil.dia+' ('+z.perfil.diaPct+'%)':'—',z.lat,z.lng])}}
 function pmRun(){const el=$('pml'),M=S.pm=pmModel();
  if(!M){el.innerHTML='<div class="warn">Poucos registros para prever com esses filtros (mínimo 50). Mude a natureza, o turno ou a região.</div>';pDraw();return}
- const sel=$('pmm'),cur=sel.value;sel.innerHTML='<option value="auto">Método: automático (backtest)</option>'+M.bt.mets.map(m=>`<option value="${m.id}">${m.nome}</option>`).join('');sel.value=[...sel.options].some(o=>o.value===cur)?cur:'auto';
+ const sel=$('pmm'),cur=sel.value;sel.innerHTML='<option value="auto">Método: automático (backtest)</option>'+M.bt.mets.filter(m=>!m.ref).map(m=>`<option value="${m.id}">${m.nome}</option>`).join('');sel.value=[...sel.options].some(o=>o.value===cur)?cur:'auto';
  const autoW=btHorizonte(M.bt.sp,'auto'),hz=['<option value="auto">Horizonte: automático ('+autoW+' dias)</option>',...M.bt.opcoes.map(w=>`<option value="${w}">Horizonte: ${w} dias</option>`)].join(''),hv=$('phz').value;
  for(const id of['phz','pmz']){$(id).innerHTML=hz;$(id).value=[...$(id).options].some(o=>o.value===hv)?hv:'auto'}$('pmtt').textContent='Mapa de predição · próximos '+M.W+' dias';
  const un=pUn(),tot=M.total,wp=M.bt.vol.n?M.bt.vol.wapeT[M.vm]:null;btRelatorio(M);pmRelZonas(M);

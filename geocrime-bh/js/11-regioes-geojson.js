@@ -59,9 +59,10 @@ function geoLocate(set,x,y){for(let i=0;i<set.feats.length;i++)if(geoIn(set.feat
 
 /* ---- aplicar ao app ---- */
 function preencherRegioes(){const v=$('fr').value;$('fr').innerHTML='<option value="">Todas as regiões</option>'+RG.map((r,i)=>`<option value="${i}">${r.n}</option>`).join('');$('fr').value=v!==''&&+v<RG.length?v:''}
-function modosRonda(){const sel=$('rq'),v=sel.value;
- sel.innerHTML=(GEO.R?`<option value="reg">Regiões (${GEO.R.feats.length} polígonos)</option>`:'')+(GEO.Q?`<option value="qd">Quadrantes importados (${GEO.Q.feats.length})</option>`:'')+'<option value="2">Grade 2×2</option><option value="3">Grade 3×3</option><option value="4">Grade 4×4</option>';
- sel.value=[...sel.options].some(o=>o.value===v)?v:sel.options[0].value}
+function modosRonda(){const sel=$('rq'),v=sel.value||'cel';
+ sel.innerHTML=(GEO.R?`<option value="reg">Regiões (${GEO.R.feats.length} polígonos)</option>`:'')+(GEO.Q?`<option value="qd">Quadrantes importados (${GEO.Q.feats.length})</option>`:'')+'<option value="cel">Células da QuadTree (uma por viatura)</option><option value="2">Grade 2×2</option><option value="3">Grade 3×3</option><option value="4">Grade 4×4</option><option value="5">Grade 5×5</option><option value="6">Grade 6×6</option><option value="8">Grade 8×8</option>';
+ sel.value=[...sel.options].some(o=>o.value===v)?v:sel.options[0].value;$('rnl').hidden=sel.value!=='cel'}
+$('rq').addEventListener('change',()=>{$('rnl').hidden=$('rq').value!=='cel'});
 function geoInfo(){const r=GEO.R,q=GEO.Q;
  $('geoinfo').innerHTML=`<b>Regiões:</b> ${r?`${r.feats.length} polígonos · ${r.fonte}`:'aproximadas (ponto mais próximo de uma semente)'}<br><b>Quadrantes:</b> ${q?`${q.feats.length} polígonos · ${q.fonte}`:'nenhum (a ronda usa regiões ou grade)'}`;modosRonda()}
 function aplicarRegioes(set){

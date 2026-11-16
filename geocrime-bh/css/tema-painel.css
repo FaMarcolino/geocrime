@@ -196,3 +196,13 @@ em.up{color:#fda4af;background:rgba(251,113,133,.14)}em.dn{color:#6ee7b7;backgro
 #sbt{display:none}
 @media(max-width:1280px){.dchip{width:34px;height:34px;padding:0;gap:0;justify-content:center;font-size:0;flex:none}.sbx kbd{display:none}}
 @media(max-width:700px){#sbt{display:grid}#fs{display:none}.sbx{display:none}.sbx.open{display:flex;position:absolute;left:8px;right:8px;top:calc(100% + 6px);max-width:none;z-index:30;background:var(--bg);box-shadow:var(--sh)}.vt button{padding:6px 8px}}
+
+/* ---- ronda: painel de paradas e links para Maps/Waze ---- */
+tr.hl.on{background:rgba(124,140,255,.18)}.fora-w{color:#f59e0b;font-weight:700}
+.rdet{margin-top:8px;padding:10px;border:1px solid var(--bd);border-radius:12px;background:var(--pn2)}.rdet ol{margin:8px 0 6px;padding-left:20px}.rdet li{margin:3px 0}.rdet li.bs{list-style:none;margin-left:-20px}
+.rdet a{color:var(--ac);font-weight:600;text-decoration:none}.rdet a:hover{text-decoration:underline}.rdet a.bt{display:inline-block;padding:6px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);margin:6px 6px 0 0}
+
+/* ---- comparação de algoritmos ---- */
+.cmpg{display:grid;gap:14px;margin-top:12px}.cmpc h3{margin:0 0 4px}.tw{overflow:auto;margin-top:8px}
+.cmpt{border-collapse:collapse;font-size:12px;width:100%}.cmpt th,.cmpt td{padding:5px 9px;text-align:right;border-bottom:1px solid var(--bd);white-space:nowrap}.cmpt th{color:var(--mu);font-weight:600;position:sticky;top:0;background:var(--pn)}
+.cmpt td:first-child,.cmpt th:first-child{text-align:left;position:sticky;left:0;background:var(--pn)}.cmpt tr.ref td:first-child{font-style:italic}.cmpt td.sig{color:var(--ac);font-weight:700}

@@ -5,10 +5,10 @@ let VISTA='mapa';
 const DASH={escopo:'filtros',dias:0};
 function setView(v){
  if(v===VISTA&&document.body.dataset.v===v)return;VISTA=v;document.body.dataset.v=v;
- $('vd').hidden=v!=='dash';$('vr').hidden=v!=='rel';[...$('vt').children].forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+ $('vd').hidden=v!=='dash';$('vr').hidden=v!=='rel';$('vcmp').hidden=v!=='cmp';[...$('vt').children].forEach(b=>b.classList.toggle('on',b.dataset.v===v));
  if(v!=='mapa'){$('pm').hidden=true;$('bp').hidden=true}
  {const m=v==='dash'?'t3':v==='rel'?'t4':document.querySelector('.tp.on')&&/t3|t4/.test(document.querySelector('.tp.on').id)?'t1':null,b=m&&document.querySelector('.tabs [data-p="'+m+'"]');if(b&&!b.classList.contains('on'))b.click()}
- if(v==='dash')renderDash();else if(v==='rel')renderRel();else setTimeout(draw,0)}
+ if(v==='dash')renderDash();else if(v==='rel')renderRel();else if(v==='cmp')renderCmp();else setTimeout(draw,0)}
 $('vt').onclick=e=>{const b=e.target.closest('button');if(b)setView(b.dataset.v)};
 /* itens do menu lateral: clique do usuário muda de vista (Análise → Dashboard, Relatórios → Relatório; os demais → Mapa) */
 document.querySelectorAll('.tabs>button').forEach(b=>b.addEventListener('click',e=>{if(e.isTrusted)setView({t1:'mapa',t2:'mapa',t3:'dash',t4:'rel'}[b.dataset.p])}));

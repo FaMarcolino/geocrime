@@ -38,7 +38,7 @@ function csvAplicar(rows,m,nat,commit){
   let ty;if(m.tipo>=0){const v=(r[m.tipo]||'').trim();ty=v in nat?nat[v]:csvCategoria(v);if(!ty){c.natIgn++;continue}}else ty=nat['']||'Roubo';
   const dv=m.data>=0?r[m.data]||'':'';let h=m.hora>=0?csvHora(r[m.hora]):null;if(h==null)h=csvHora(dv.slice(10));if(h==null){h=12;c.semHora++}
   const d=csvData(dv);if(!d)c.semData++;c.ok++;
-  if(commit){const p=mk(la,ln,ty,h,'Ponto importado',d?Math.max(0,Math.round((Date.now()-d)/864e5)):0);p.ts=d?d.getTime():0;out.push(p)}}
+  if(commit){const p=mk(la,ln,ty,h,'Ponto importado',agoDe(d));p.ts=d?d.getTime():0;out.push(p)}}
  return{out,c}}
 const csvAvisos=c=>[c.foraBH&&`${c.foraBH} fora de BH`,c.semCoord&&`${c.semCoord} sem coordenada válida`,c.natIgn&&`${c.natIgn} de natureza ignorada`,c.semHora&&`${c.semHora} sem hora (assumido 12h)`,c.semData&&`${c.semData} sem data válida (assumido hoje)`].filter(Boolean);
 
@@ -49,7 +49,7 @@ async function baseSalvar(nome,pts){
  pts.forEach((p,i)=>{o.x[i]=p.x;o.y[i]=p.y;o.t[i]=TCOD.indexOf(p.t);o.h[i]=p.h;o.ts[i]=p.ts||0});
  await idbSet('base',o);await idbSet('base_meta',{nome,quando:o.quando,n});await baseCartao()}
 async function baseRestaurar(){const o=await idbGet('base');if(!o)return toast('Nenhuma base salva.','er');
- const pts=Array.from({length:o.n},(_,i)=>{const ts=o.ts[i],p=mk(LAT0+o.y[i]/KY,LNG0+o.x[i]/KX,TCOD[o.t[i]],o.h[i],'Ponto importado',ts?Math.max(0,Math.round((Date.now()-ts)/864e5)):0);p.ts=ts;return p});
+ const pts=Array.from({length:o.n},(_,i)=>{const ts=o.ts[i],p=mk(LAT0+o.y[i]/KY,LNG0+o.x[i]/KX,TCOD[o.t[i]],o.h[i],'Ponto importado',agoDe(ts));p.ts=ts;return p});
  load(pts,`· ${o.nome} (${o.n}, salva)`);toast(`Base restaurada: ${o.n.toLocaleString('pt-BR')} registros`)}
 async function baseApagar(){try{await idbDel('base');await idbDel('base_meta')}catch(e){}await baseCartao();toast('Base salva apagada')}
 async function baseCartao(){let m=null;try{m=await idbGet('base_meta')}catch(e){}

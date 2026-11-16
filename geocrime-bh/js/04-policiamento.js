@@ -41,8 +41,8 @@ const mkQT=()=>new QT(...S.box,(x,y)=>RG[reg(x,y)].c,+$('dep').value);
 S.rep={};
 function buildMonths(){const ms=[...new Set(S.all.map(p=>p.ym))].sort((a,b)=>a-b),o=ms.map(y=>`<option value="${y}">${mlb(y)}</option>`).join('');S.ms=ms;
  $('fm').innerHTML='<option value="">Todos os meses</option>'+o;$('ca').innerHTML=$('cb').innerHTML=o;$('ca').value=ms[Math.max(0,ms.length-2)];$('cb').value=ms[ms.length-1]}
-function topSpots(n,R,bx){const out=[],sc=S.lv.filter(l=>{if(!bx)return true;const c=cen(l);return bx.has?bx.has(c.x,c.y):c.x>=bx.x0&&c.x<bx.x1&&c.y>=bx.y0&&c.y<bx.y1}).map(l=>{const c=cen(l),a=S.qt.rng(c.x,c.y,R,[],{v:0});return{...c,s:wsum(a),n:a.length}}).sort((a,b)=>b.s-a.s);
- for(const c of sc){if(out.length>=n)break;if(out.every(o=>Math.hypot(o.x-c.x,o.y-c.y)>=2*R))out.push(c)}
+function topSpots(n,R,bx,ev=[]){const out=[],sc=S.lv.filter(l=>{if(!bx)return true;const c=cen(l);return bx.has?bx.has(c.x,c.y):c.x>=bx.x0&&c.x<bx.x1&&c.y>=bx.y0&&c.y<bx.y1}).map(l=>{const c=cen(l),a=S.qt.rng(c.x,c.y,R,[],{v:0});return{...c,s:wsum(a),n:a.length}}).sort((a,b)=>b.s-a.s);
+ for(const c of sc){if(out.length>=n)break;if(out.every(o=>Math.hypot(o.x-c.x,o.y-c.y)>=2*R)&&ev.every(o=>Math.hypot(o.x-c.x,o.y-c.y)>=2*R))out.push(c)}
  for(const o of out){const q=S.qt.knn(o.x,o.y,1,[],{v:0})[0];o.b=q?q.p.b:'—';o.r=S.mean?o.s/(Math.PI*R*R)/S.mean:0}return out}
 function regStats(){const D=RG.map(()=>({n:0,s:0}));S.f.forEach(p=>{const q=D[p.r];q.n++;q.s+=T[p.t].w});return D}
 function extras(){S.nm=Math.max(1,new Set(S.f.map(p=>p.ym)).size);delete S.rep.cobertura;delete S.rep.bases;

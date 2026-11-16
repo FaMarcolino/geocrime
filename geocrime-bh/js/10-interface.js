@@ -66,7 +66,7 @@ document.addEventListener('keydown',e=>{if(/INPUT|SELECT|TEXTAREA/.test(e.target
   rd0:()=>{reveal('rd')},pd:()=>S.pm?'Mapa de predição aberto':null,
   db:()=>{reveal('dbr');return S.cl?S.cl.length+' aglomerado(s) detectado(s)':null},
   cmp:()=>{reveal('cr');return S.cmp?'Mapa de diferença: vermelho aumentou, azul diminuiu':null},
-  rb:()=>{reveal('rrs');return S.rt?`${S.rt.q.length} rondas geradas, uma por quadrante`:null},bm:()=>{reveal('bmr')},bsc:()=>{reveal('sc')}};
+  rb:()=>{reveal('rrs');return S.rt?`${S.rt.q.length} rondas geradas por divisão`:null},bm:()=>{reveal('bmr')},bsc:()=>{reveal('sc')}};
  Object.keys(AFT).forEach(id=>{const b=$(id),f=b.onclick;b.onclick=()=>{if(['go','rd0','pd','db','cmp','rb'].includes(id)&&typeof setView==='function')setView('mapa');b.classList.add('busy');b.disabled=true;
   setTimeout(async()=>{try{await f.call(b)}catch(err){toast('Erro: '+(err.message||err),'er')}b.classList.remove('busy');b.disabled=false;const m=AFT[id]();if(m)toast(m)},40)}})}
 

@@ -2,10 +2,11 @@
    O usuário escolhe título, dados, seções (ligar/desligar, ordem, comentário por seção), escreve o resumo e blocos de texto,
    vê a prévia em papel e exporta em PDF (imprimir), CSV ou HTML. A configuração e os modelos ficam salvos no navegador. */
 const REL_PADRAO=()=>({titulo:'Relatório de análise criminal',sub:'',inst:'',unidade:'',autor:'',data:'',local:'Belo Horizonte',ano:'',capa:1,sumario:1,fonte:'Times New Roman',tam:12,esp:1.5,refs:'',escopo:'filtros',dias:0,logo:'',resumoTxt:'',
- ordem:['resumo','kpis','evolucao','natureza','horario','regioes','manchas','locais','mapa','sazonal','cobertura','ronda','mapaRonda','previsao','mapaPred','comparacao','aglomerados','rotaArea','fontes','etica'],
- on:{resumo:1,kpis:1,evolucao:1,natureza:1,horario:1,regioes:1,manchas:1,locais:0,mapa:1,sazonal:0,cobertura:1,ronda:1,mapaRonda:0,previsao:1,mapaPred:1,comparacao:1,aglomerados:1,rotaArea:1,fontes:1,etica:1},notas:{},abertas:{},extras:[]});
+ ordem:['resumo','kpis','evolucao','natureza','horario','regioes','manchas','locais','mapa','sazonal','cobertura','ronda','mapaRonda','previsao','mapaPred','comparacao','compAlg','aglomerados','rotaArea','fontes','etica'],
+ on:{resumo:1,kpis:1,evolucao:1,natureza:1,horario:1,regioes:1,manchas:1,locais:0,mapa:1,sazonal:0,cobertura:1,ronda:1,mapaRonda:0,previsao:1,mapaPred:1,comparacao:1,compAlg:1,aglomerados:1,rotaArea:1,fontes:1,etica:1},notas:{},abertas:{},extras:[]});
 let REL=REL_PADRAO();
 try{const s=JSON.parse(store.get('gc_rel')||'null');if(s)REL={...REL_PADRAO(),...s,on:{...REL_PADRAO().on,...s.on}}}catch(e){}
+{const pad=REL_PADRAO().ordem;pad.forEach((id,i)=>{if(!REL.ordem.includes(id)){const k=REL.ordem.indexOf(pad[i-1]);REL.ordem.splice(k>=0?k+1:REL.ordem.length,0,id)}})}/* modelos antigos ganham as seções novas */
 const relSalvar=(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(()=>store.set('gc_rel',JSON.stringify(REL)),300)}})();
 
 /* ---- seções disponíveis ---- */
@@ -31,6 +32,9 @@ const SEC={
   tab:()=>['zonasPrev','backtest','backtestVolume','previsao'].filter(k=>S.rep[k]).map(k=>({t:TT[k],...S.rep[k]}))},
  mapaPred:{n:'Mapa de predição',d:'Imagem do mapa de predição.',ok:()=>!!S.pm,pede:'Prever',run:()=>$('pd').click(),html:()=>`<img class="rim" alt="Mapa de predição" src="${snapImg('pred')}">`,tab:()=>[]},
  comparacao:{n:'Comparação de períodos',d:'Resultado de "Comparar períodos".',ok:()=>!!S.rep.comparacao,pede:'Comparar períodos (aba Análise)',run:()=>{setView('mapa');mostrarModulo('t3');reveal('cr')},html:()=>tbl(S.rep.comparacao.h,S.rep.comparacao.r),tab:()=>[{t:'Comparação de períodos',...S.rep.comparacao}]},
+ compAlg:{n:'Comparação de algoritmos',d:'Resultado de "Comparar algoritmos" (aba Comparação): algoritmos da literatura, grade uniforme e recorte por células da QuadTree.',ok:()=>!!S.rep.compAlgDados,pede:'Comparar algoritmos (aba Comparação)',run:()=>setView('cmp'),
+  html:()=>{const R=S.rep.compAlgDados;return`<p>${cmpResumoTexto(R)}</p>`+R.cenarios.map(c=>{const t=cmpTabela(c);return`<h3>${esc(c.nome)}</h3>`+tbl(t.h,t.r)}).join('')+`<p>${CMP_LEGENDA}</p>`},
+  tab:()=>[{t:'Comparação de algoritmos',...S.rep.compAlg}]},
  aglomerados:{n:'Aglomerados (DBSCAN)',d:'Resultado de "Detectar aglomerados".',ok:()=>!!S.rep.clusters,pede:'Detectar aglomerados',run:()=>$('db').click(),html:()=>tbl(S.rep.clusters.h,S.rep.clusters.r),tab:()=>[{t:'Aglomerados',...S.rep.clusters}]},
  rotaArea:{n:'Rota da área selecionada',d:'Rotas geradas ao selecionar uma área no mapa.',ok:()=>!!S.rep.rotaArea,pede:'Selecionar uma área no mapa',run:()=>{setView('mapa');toggleSel()},html:()=>tbl(S.rep.rotaArea.h,S.rep.rotaArea.r),tab:()=>[{t:'Rota da área selecionada',...S.rep.rotaArea}]},
  fontes:{n:'Fontes e metodologia',d:'De onde vêm os dados e como cada número é calculado.',ok:()=>true,html:()=>`<ul>${FONTES().map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`,tab:()=>[]},

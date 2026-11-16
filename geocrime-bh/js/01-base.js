@@ -7,6 +7,9 @@ const CEN=[['Centro',-19.919,-43.938,10,1200],['Savassi',-19.938,-43.935,5,900],
 const f1=v=>v.toFixed(1).replace('.',','),wsum=a=>a.reduce((s,p)=>s+T[p.t].w,0);
 const cv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const gs=()=>Math.sqrt(-2*Math.log(Math.random()||1e-9))*Math.cos(2*Math.PI*Math.random());
+/* dias de calendário entre a data (meia-noite local) e hoje: não depende da hora em que o arquivo é importado */
+const agoDe=ts=>ts?Math.max(0,Math.round((new Date().setHours(0,0,0,0)-ts)/864e5)):0;
+const isoLocal=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const mkDate=a=>{const d=new Date(Date.now()-a*864e5);return{ago:a,ym:d.getFullYear()*12+d.getMonth(),dm:d.getDate()}};
 const mk=(la,ln,t,h,b,a=0)=>{const x=(ln-LNG0)*KX,y=(la-LAT0)*KY;return{x,y,t,h,b,r:reg(x,y),...mkDate(a)}};
 const mlb=y=>new Date(Math.floor(y/12),y%12,1).toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}).replace('.','');

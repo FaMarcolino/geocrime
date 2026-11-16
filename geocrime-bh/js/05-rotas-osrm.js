@@ -1,6 +1,6 @@
 /* ===== rotas reais (OSRM) e utilitários de requisição ===== */
 async function osrm(P){const c=P.map(p=>`${(LNG0+p.x/KX).toFixed(6)},${(LAT0+p.y/KY).toFixed(6)}`).join(';'),r=await fetch(`https://router.project-osrm.org/route/v1/driving/${c}?overview=full&geometries=geojson`),t=(await r.json()).routes[0];
- return{g:t.geometry.coordinates.map(([a,b])=>[(a-LNG0)*KX,(b-LAT0)*KY]),km:t.distance/1000,min:t.duration/60}}
+ return{g:t.geometry.coordinates.map(([a,b])=>[(a-LNG0)*KX,(b-LAT0)*KY]),km:t.distance/1000,min:t.duration/60,legs:(t.legs||[]).map(l=>l.distance)}}
 /* matriz de durações/distâncias reais entre pontos; sem internet usa linha reta × 1,35 a 25 km/h */
 const VEL_KMH=25,CIRC=1.35;
 async function matriz(pts){
