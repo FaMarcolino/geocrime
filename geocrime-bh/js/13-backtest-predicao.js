@@ -14,7 +14,7 @@ const btMeses=sp=>sp/30.44;
 /* horizonte: o escolhido pelo usuário (se couber) ou o melhor para o tamanho da base */
 function btHorizonte(span,pedido){const op=btOpcoes(span);if(pedido&&pedido!=='auto'&&op.includes(+pedido))return+pedido;return span>=240?30:span>=90?14:7}
 const btOpcoes=span=>[7,14,30,60,90].filter(w=>w*3<=span||w===7);
-const btCortes=(span,W)=>{const c=[];for(let k=1;k<=BT_MAX_JAN&&k*W+2*W<=span;k++)c.push(k*W);return c};
+const btCortes=(span,W,max=BT_MAX_JAN)=>{const c=[];for(let k=1;k<=max&&k*W+2*W<=span;k++)c.push(k*W);return c};
 const btTemSazonal=(span,W)=>span>=365+2*W;
 const btMetodos=(hl,span,W)=>[{id:'A',nome:`Últimos ${W} dias`},{id:'B',nome:'Histórico completo'},...btHLs(hl).map(h=>({id:'C'+h,nome:`Recência (meia-vida ${h} d)`,hl:h})),...(btTemSazonal(span,W)?[{id:'Z',nome:'Mesmo período do ano anterior'}]:[]),...BT_REF];
 /* peso de um registro para a previsão feita no instante "cut" (idade contada a partir do corte) */

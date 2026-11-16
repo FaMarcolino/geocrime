@@ -58,7 +58,7 @@ function btMetKDEA(hl,R){return{id:'K',nome:`KDE adaptativo, QuadTree (meia-vida
 /* ---- execução ---- */
 const CMP={res:null,rodando:false,parar:false};
 const cmpFolga=()=>new Promise(r=>setTimeout(r,0));
-async function cmpRodar({fonte='cenarios',sementes=5,onProg=()=>{}}={}){
+async function cmpRodar({fonte='cenarios',sementes=5,janelas=0,onProg=()=>{}}={}){
  const R=+$('R').value,HL=+$('hl').value||45,salvo={all:S.all,box:S.box,bb:S.bb,area:S.area},raw=[];CMP.rodando=true;CMP.parar=false;
  try{
   const tarefas=fonte==='cenarios'?Object.keys(BASES_TESTE).flatMap(id=>Array.from({length:sementes},(_,i)=>({id,seed:i+1}))):[{id:'carregada',seed:0}];let k=0;
@@ -67,7 +67,7 @@ async function cmpRodar({fonte='cenarios',sementes=5,onProg=()=>{}}={}){
    if(t.id!=='carregada'){const o=BASES_TESTE[t.id].gerar(t.seed);P=o.pontos;verdade=o.verdade;nome=BASES_TESTE[t.id].nome}
    P=btRebase(P);S.all=P;setBox();/* a QuadTree usa a caixa dos dados em S.box */
    const sp=btSpan(P);let W,cortes;
-   if(t.id==='carnaval'){W=4;cortes=verdade.janelas.filter(j=>j.historicoDias>=400).map(j=>j.cut)}else{W=btHorizonte(sp,'auto');cortes=btCortes(sp,W)}
+   if(t.id==='carnaval'){W=4;cortes=verdade.janelas.filter(j=>j.historicoDias>=400).map(j=>j.cut)}else{W=btHorizonte(sp,'auto');cortes=btCortes(sp,W,janelas||BT_MAX_JAN)}
    const mets=[...btMetodos(HL,sp,W),btMetKDEA(HL,R)],G=btGrade(P,R);let sc=raw.find(r=>r.id===t.id);
    if(!sc){sc={id:t.id,nome,W,mets:mets.map(m=>({id:m.id,nome:m.nome,ref:!!m.ref,vs:m.vs})),wins:[]};raw.push(sc)}
    for(const c of cortes){const w=btJanela(P,G,R,c,mets,W,{qt:true});if(w)sc.wins.push({seed:t.seed,cut:c,res:w.res,par:w.par,nQT:w.nQT,ntr:w.ntr,nte:w.nte});await cmpFolga()}}

@@ -11,6 +11,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2), pos = args.filter(a => !a.startsWith('--'));
 const CSV = (args.find(a => a.startsWith('--csv=')) || '').slice(6);
 const DEP = +(args.find(a => a.startsWith('--dep=')) || '').slice(6) || 0;   // profundidade máxima da QuadTree (padrão do app: 9)
+const JAN = +(args.find(a => a.startsWith('--janelas=')) || '').slice(10) || 0;   // nº máximo de janelas de teste (padrão do app: 6)
 const SEM = +pos[0] || 5;
 const FILE = path.resolve((CSV ? pos[0] : pos[1]) || path.join(here, '..', 'geocrime-bh', 'index.html'));
 const OUT = path.join(here, 'saida'); fs.mkdirSync(OUT, {recursive: true});
@@ -27,11 +28,11 @@ if (CSV) {
   const info = await page.ev(`({n:S.all.length,chip:document.getElementById('dc').textContent})`);
   console.log(`Base importada: ${info.n} registros (${info.chip.trim()})`);
   if (!(info.n >= 100)) { await page.close(); console.error('Poucos registros importados (menos de 100): confira colunas, coordenadas dentro de BH e datas.'); process.exit(1); }
-  R = await page.ev(`cmpRodar({fonte:'carregada'}).then(r=>JSON.parse(JSON.stringify(r)))`);
-} else R = await page.ev(`cmpRodar({fonte:'cenarios',sementes:${SEM}}).then(r=>JSON.parse(JSON.stringify(r)))`);
+  R = await page.ev(`cmpRodar({fonte:'carregada',janelas:${JAN}}).then(r=>JSON.parse(JSON.stringify(r)))`);
+} else R = await page.ev(`cmpRodar({fonte:'cenarios',sementes:${SEM},janelas:${JAN}}).then(r=>JSON.parse(JSON.stringify(r)))`);
 await page.close();
 R.segundos = Math.round((Date.now() - t0) / 1000);
-const BASE = (CSV ? 'comparacao_real' : 'comparacao_bases') + (DEP ? '_prof' + DEP : '');
+const BASE = (CSV ? 'comparacao_real' : 'comparacao_bases') + (DEP ? '_prof' + DEP : '') + (JAN ? '_jan' + JAN : '');
 fs.writeFileSync(path.join(OUT, BASE + '.json'), JSON.stringify(R, null, 1));
 const n1 = (v, c = 1) => Number.isFinite(v) ? v.toFixed(c) : '—', p3 = p => p == null ? '—' : p < 0.001 ? '<0,001' : p.toFixed(3);
 let md = `# Comparação de algoritmos ${CSV ? 'na base carregada (' + path.basename(CSV) + ')' : `nos cenários de teste (${SEM} sementes)`}, ${R.segundos} s\n\nR=${R.params.R} m, profundidade máxima da QuadTree=${R.params.profundidade}.\n\n`;
