@@ -119,23 +119,71 @@ Leituras que os números permitem, e limites:
 
 | Método | Focos fixos | Foco que se desloca | Contágio | Sazonal | Carnaval |
 |---|---|---|---|---|---|
-| Últimos N dias | 19,6 → 24,6 **+*** | 41,9 → 45,2 **+*** | 29,7 → 27,0 **−*** | 27,7 → 32,0 **+*** | 10,9 → 14,6 **+*** |
-| KDE (histórico completo) | 32,4 → 32,1 | 25,1 → 21,2 **−*** | 29,4 → 30,5 | 29,0 → 29,2 | 74,5 → 76,3 **+*** |
-| Recência (meia-vida 30 d) | 24,9 → 28,3 **+*** | 43,6 → 45,8 **+*** | 30,8 → 29,2 | 28,2 → 30,3 **+*** | 48,9 → 57,9 **+*** |
-| Mesmo período do ano anterior | 19,2 → 24,5 **+*** | 13,6 → 17,8 **+*** | 17,4 → 18,5 | 32,8 → **38,7** **+*** | 11,2 → 14,6 **+*** |
-| Prospective hot-spotting † | 20,3 → 24,6 **+*** | 42,4 → 45,2 **+*** | 30,0 → 27,9 **−*** | 28,5 → 31,9 **+*** | 38,0 → 46,6 **+*** |
-| ETAS † | **33,3** → 32,5 **−*** | **49,5** → 46,7 **−*** | **38,4** → 34,8 **−*** | 33,1 → 33,5 | **76,7** → 76,3 |
+| Últimos N dias | 19,6 → 24,6 **+*** | 41,9 → 45,2 **+*** | 29,7 → 27,0 **−*** | 28,1 → 32,5 **+*** | 12,8 → 17,1 **+*** |
+| KDE (histórico completo) | 32,4 → 32,1 | 25,1 → 21,2 **−*** | 29,4 → 30,5 | 29,5 → 29,2 | 75,1 → 76,0 |
+| Recência (meia-vida 45 d) | 26,9 → 29,7 **+*** | 44,2 → 44,9 | 30,4 → 30,3 | 27,8 → 29,6 **+*** | 56,5 → 64,5 **+*** |
+| Mesmo período do ano anterior | 19,2 → 24,5 **+*** | 13,6 → 17,8 **+*** | 17,4 → 18,5 | 32,3 → **37,2** **+*** | 12,2 → 16,4 **+*** |
+| Prospective hot-spotting † | 20,3 → 24,6 **+*** | 42,4 → 45,2 **+*** | 30,0 → 27,9 | 28,8 → 32,0 **+*** | 40,3 → 46,6 **+*** |
+| ETAS † | **33,3** → 32,5 **−*** | **49,5** → 46,7 **−*** | **38,4** → 34,8 **−*** | 33,6 → 33,5 | **76,8** → 76,4 |
+| KDE adaptativo (QuadTree) † | 27,8 → 28,9 **+*** | 46,8 → 45,1 **−*** | 29,4 → 29,0 | 26,4 → 28,0 **+*** | 52,8 → 57,9 **+*** |
 
-Em negrito, o melhor resultado de cada cenário. No conjunto, o recorte melhorou o acerto de forma significativa em 27 das 50 combinações algoritmo × cenário, piorou em 8 e não mostrou diferença em 15. A tabela completa (PAI, PEI, diferenças, intervalos e p-valores) está em `testes/saida/comparacao_bases.md` ao rodar o comando acima, e na própria aba.
+Em negrito, o melhor resultado de cada cenário (considerando grade e recorte). No conjunto (11 métodos × 5 cenários), o recorte melhorou o acerto de forma significativa em 31 das 55 combinações, piorou em 8 e não mostrou diferença em 16. A tabela completa (PAI, PEI, diferenças, intervalos e p-valores) está em `testes/saida/comparacao_bases.md` ao rodar o comando acima, e na própria aba. A linha *KDE adaptativo* é descrita mais abaixo.
 
 **O que os resultados permitem dizer, e o que não.**
-- O recorte por QuadTree **melhora de forma consistente os métodos simples ou ruidosos** (últimos N dias, meias-vidas curtas, prospective hot-spotting, mesmo período do ano anterior): de cerca de +2 a +9 pontos percentuais em quatro dos cinco cenários. Uma explicação plausível, **não testada aqui**, é que as folhas agregam registros esparsos e recentes em áreas maiores, o que age como um suavizador espacial.
-- Para os **melhores algoritmos** (KDE com longo histórico e ETAS), o recorte não ajuda ou piora (de −0,8 a −3,6 pontos no ETAS, significativo em três cenários). **O melhor resultado em cada cenário continua sendo do ETAS na grade, em quatro dos cinco cenários** (no Carnaval, empatado com o KDE com recorte). A exceção é o cenário sazonal, em que "mesmo período do ano anterior" com o recorte (38,7%) superou o melhor resultado da grade (ETAS, 33,1%).
+- O recorte por QuadTree **melhora de forma consistente os métodos simples ou ruidosos** (últimos N dias, meias-vidas curtas, prospective hot-spotting, mesmo período do ano anterior): de cerca de +2 a +9 pontos percentuais em quatro dos cinco cenários (a exceção é o contágio). Uma explicação plausível, **não testada aqui**, é que as folhas agregam registros esparsos e recentes em áreas maiores, o que age como um suavizador espacial.
+- Para os **melhores algoritmos** (KDE com longo histórico e ETAS), o recorte não ajuda ou piora (de −0,1 a −3,6 pontos no ETAS, significativo em três cenários). **O melhor resultado em cada cenário é do ETAS na grade, em quatro dos cinco cenários.** A exceção é o cenário sazonal, em que "mesmo período do ano anterior" com o recorte (37,2%) superou o melhor resultado da grade (ETAS, 33,6%).
 - No **contágio**, o recorte prejudica os métodos de curto prazo. Uma hipótese, também não testada, é que o contágio é um fenômeno local (cerca de 120 m) que células grandes borram.
 - Portanto, nestes cenários a hipótese "o recorte por QuadTree melhora a previsão" **é apoiada em parte**: vale para os métodos mais simples, mas **não supera o melhor algoritmo da literatura**. Isso é um resultado negativo parcial e deve ser reportado como tal.
+- **Cuidado com a generalização:** os cenários sintéticos foram construídos para exibir fenômenos específicos (por exemplo, o contágio é gerado por um processo auto-excitante, que o ETAS modela). A vantagem do ETAS aqui é esperada e **não se repetiu na base real** (ver abaixo).
 
-**Limites.**
-- Só dados sintéticos; as conclusões valem para estes cenários, parâmetros e sementes. Com dados reais, o resultado pode ser outro (para isso, use *Comparação → Base carregada*, que roda localmente).
+### KDE adaptativo com a QuadTree
+
+**Pergunta.** Em vez de usar a QuadTree só para recortar, usá-la para ajustar a largura do kernel à densidade local (como no KDE de largura variável de Mohler et al., 2011, e na discussão de Chainey et al., 2008) melhora o KDE de largura fixa?
+
+**Método (só para comparação, não entra no seletor do app).** Cada registro de treino espalha seu peso (mesma recência do método "Recência, meia-vida 45 d") num kernel triangular de raio igual à distância ao 15º vizinho mais próximo (busca na QuadTree), limitado a [R/2, 2R]; o kernel é normalizado pela área. Onde há muitos registros o foco fica estreito; onde há poucos, suave. O número de vizinhos (15) e os limites **não foram ajustados**, para não ajustar parâmetros olhando os dados de teste. Como o peso temporal é o mesmo, a diferença para o método de largura fixa vem só da largura de banda (teste de Wilcoxon pareado; p sem correção de Holm, comparação única planejada).
+
+**Resultado (diferença de acerto em pontos percentuais, adaptativo menos largura fixa, intervalo de 95%).**
+
+| Base | Δ (IC 95%) | p |
+|---|---|---|
+| Focos fixos | +0,9 (0,5 a 1,4) | 0,001 |
+| Foco que se desloca | +2,6 (2,1 a 3,2) | <0,001 |
+| Contágio | −1,0 (−1,9 a −0,2) | 0,035 |
+| Sazonal | −1,4 (−2,3 a −0,5) | 0,007 |
+| Carnaval | −3,7 (−6,0 a −1,3) | 0,005 |
+| **Base real (2022 em diante, 24 janelas)** | **−1,5 (−3,2 a +0,3)** | 0,021 |
+
+**Conclusão.** A largura de banda adaptativa **não melhorou o acerto de forma consistente**: ajudou em dois cenários sintéticos, piorou em três e, na base real, ficou igual ou pior que a largura fixa. Em nenhuma base superou o ETAS. Como os p-valores são otimistas (janelas que compartilham treino) e não há correção entre as seis comparações, a leitura segura é "sem ganho geral".
+
+### Validação na base real (furtos de cabos de cobre em BH)
+
+**Dados.** `dados/base_dados.csv`: 19.146 registros de furtos de cabos de cobre em BH (mar/2018 a dez/2025), de registros operacionais da Prefeitura, da Guarda Municipal, da BHTrans e de operadoras (não são Boletins de Ocorrência policiais). Origem, tratamento e limitações estão em [dados/LEIAME.md](../dados/LEIAME.md); a fonte é Santos e Silva (2026, CSBC/LASDiGov). **Os resultados valem para esse tipo de crime, não para criminalidade em geral.** A base não tem coluna de natureza. O relatório de qualidade (`node testes/validar-base.mjs`) achou: 4 registros fora da caixa de BH usada pelo app, 493 duplicatas exatas (apesar de o artigo dizer que foram removidas), coordenadas arredondadas a ~11 m em 14,3% dos registros de 2024, e horário 00:00:00 em 1.903 registros, com proporção muito diferente por ano.
+
+**Procedimento.** `node testes/comparar-bases.mjs --csv=dados/base_dados.csv --janelas=24 [--desde=2022]`: 24 janelas de 30 dias (os últimos 24 meses da base), treinando só com o que é anterior ao corte. Com `--desde=2022` a base é restringida a 2022 em diante, como no protocolo do artigo (que treina com 2022–2024, testa em 2025 e descarta 2018–2021 por deriva conceitual e pandemia). Nota técnica: o app contava a idade dos registros a partir de hoje; como a base termina em 2025, as janelas de teste ficavam vazias. Passou-se a contar a partir do registro mais recente (`btRebase`).
+
+**Resultado (acerto médio %, grade uniforme; o recorte por QuadTree não teve diferença significativa em nenhum método).**
+
+| Método | Todos os dados (19.142) | Só 2022 em diante (16.383) | Δ vs histórico completo (2022+) | p (Holm) |
+|---|---|---|---|---|
+| Recência, meia-vida 60 d | 35,6 | 36,5 | +1,0 | 1,0 |
+| Recência, meia-vida 120 d | 36,0 | 36,2 | +0,7 | 1,0 |
+| Histórico completo (KDE) | 34,6 | 35,5 | — | — |
+| ETAS † | 35,1 | 35,5 | 0,0 | 1,0 |
+| KDE adaptativo † | 32,6 | 33,9 | −1,6 | 0,32 |
+| Prospective hot-spotting † | 30,2 | 30,6 | −4,9 | 0,003 |
+| Últimos 30 dias | 28,8 | 29,1 | −6,4 | <0,001 |
+| Mesmo período do ano anterior | 24,8 | 25,1 | −10,4 | <0,001 |
+
+**O que os resultados permitem dizer.**
+- **Usar pouco histórico é pior.** Últimos 30 dias, meia-vida de 15 dias, mesmo período do ano anterior e Bowers perdem de forma significativa para o histórico completo.
+- **Os melhores métodos empatam.** Recência de 45 a 120 dias, ETAS e histórico completo ficam entre 35,4% e 36,5% (PAI ≈ 7). Com todos os dados, a recência de 120 dias aparecia como significativamente melhor (+1,4; p = 0,037); com a base restrita a 2022 em diante, deixa de ser (+0,7; p = 1,0). **Esse ganho é frágil e não deve ser apresentado como vitória.**
+- **O recorte por QuadTree não mudou o acerto** em nenhum método (diferenças próximas de zero, intervalos que incluem o zero). Os ganhos vistos nos dados sintéticos para os métodos ruidosos **não se repetiram aqui**.
+- **O ETAS não superou o histórico completo**, ao contrário do que ocorreu nos cenários sintéticos.
+
+**Limites (base real).** Um só tipo de crime e uma só cidade; p-valores otimistas (janelas consecutivas compartilham dados de treino); 24 janelas; fonte operacional, com subnotificação e viés de registro; qualidade heterogênea entre anos (ver relatório de qualidade).
+
+**Limites (gerais do experimento).**
+- Os cenários sintéticos valem para estes cenários, parâmetros e sementes; a base real, para um só tipo de crime (ver acima). Os dois conjuntos de resultados **divergem em pontos importantes** (ETAS e recorte por QuadTree), e isso deve ser dito.
 - As janelas de uma mesma semente compartilham dados de treino, então os p-valores são **aproximados e tendem a ser otimistas**.
 - A QuadTree usa os parâmetros do app (profundidade máxima 9, capacidades por região) sem ajuste; outros valores podem mudar o resultado. Só foi testado o orçamento de 5% da área.
 - A pontuação das folhas é a média das células da grade (o algoritmo não é reexecutado na escala de cada folha), e o número de áreas patrulháveis difere entre os recortes (algumas centenas de folhas contra milhares de células).
@@ -189,11 +237,13 @@ WHITE; HUNT; GREEN. A discussion of current crime forecasting indices and an imp
 
 **Aprendizado profundo (para a seção de trabalhos relacionados):** o trabalho inicial com ST-ResNet em previsão de crimes em tempo real é um *preprint* (arXiv:1707.03340) [conferir autoria e se há versão publicada]. Há trabalhos revisados por pares que usam ST-ResNet com LSTM (Scientific Reports, 2025, DOI 10.1038/s41598-025-24559-7) e ST-ResNet com resolução adaptativa em Suzhou (ISPRS International Journal of Geo-Information, v. 10, n. 5, art. 314, 2021) [conferir ambos].
 
-**Trabalhos brasileiros a obter (título e autoria a confirmar na fonte):** comparação de algoritmos de agrupamento em dados de Belo Horizonte (Workshop de Computação Geoespacial, SBC: <https://sol.sbc.org.br/index.php/wcge/article/view/43606>); dissertação da UFC (2020) sobre hotspots em redes de ruas (PHAR, SHAR, Expansive Network) comparados ao KDE em grade.
+SANTOS, D. E.; SILVA, C. A. **Avaliação comparativa de métodos de agrupamento para detecção de zonas de criminalidade: subsídios à segurança pública em Belo Horizonte.** In: CONGRESSO DA SOCIEDADE BRASILEIRA DE COMPUTAÇÃO (CSBC), 46., 2026, Gramado; LATIN AMERICAN SYMPOSIUM ON DIGITAL GOVERNMENT (LASDiGov), 14., 2026. Porto Alegre: SBC, 2026. Disponível em: <https://sol.sbc.org.br/index.php/wcge/article/view/43606>. **[lido em 16/11/2026; conferir anais e páginas]** Fonte da base real usada na validação.
+
+**Trabalho brasileiro a obter (título e autoria a confirmar na fonte):** dissertação da UFC (2020) sobre hotspots em redes de ruas (PHAR, SHAR, Expansive Network) comparados ao KDE em grade.
 
 ## 7. Próximos passos desta frente
 
-1. **Feito em parte (16/11/2026):** textos completos de Mohler et al. (2011, manuscrito) e Chainey et al. (2008, *preprint*) lidos e a seção 3 corrigida. **Falta ler Bowers et al. (2004)** (acesso restrito: pedir pela biblioteca da universidade/Portal CAPES ou aos autores) e conferir os números na versão publicada de cada artigo. Falta também decidir se o ETAS passa a ter ν(t) e fundo com largura escolhida por validação cruzada, para ficar mais próximo do artigo.
-2. **Pendente: base real.** Nenhuma base real estava disponível no projeto. O comando `node testes/comparar-bases.mjs --csv=caminho/dados.csv` roda a comparação sobre um CSV (importação automática, tudo local, saída em `testes/saida/comparacao_real.md`); ele foi testado só com um CSV sintético. Depois, repetir com outras sementes e outros parâmetros da QuadTree (profundidade, capacidade) e outros orçamentos de área.
+1. **Feito em parte (16/11/2026):** textos completos de Mohler et al. (2011, manuscrito) e Chainey et al. (2008, *preprint*) lidos e a seção 3 corrigida. **Falta ler Bowers et al. (2004)** (acesso restrito: pedir pela biblioteca da universidade/Portal CAPES ou aos autores) e conferir os números na versão publicada de cada artigo. Falta também decidir se o ETAS passa a ter ν(t) e fundo com largura escolhida por validação cruzada, para ficar mais próximo do artigo. A definição do **PEI** também precisa de referência própria (Chainey não a define).
+2. **Feito (16/11/2026): base real.** Validação em 19.146 registros de furtos de cabos de cobre em BH (ver seção 3). Pendente: confirmar com os autores da base as 493 duplicatas exatas, a precisão das coordenadas e o horário 00:00:00; repetir com outros parâmetros da QuadTree (profundidade, capacidade) e outros orçamentos de área; e obter uma base de **outro tipo de crime** para ver se os resultados generalizam.
 3. Reexecutar o algoritmo na escala de cada folha em vez de agregar a grade, e testar um método sazonal alinhado a datas móveis (Carnaval), que não existe hoje.
 4. Decidir se entram Holt (volume) e floresta aleatória como quarto método.
