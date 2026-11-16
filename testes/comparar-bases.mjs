@@ -13,6 +13,7 @@ const CSV = (args.find(a => a.startsWith('--csv=')) || '').slice(6);
 const DEP = +(args.find(a => a.startsWith('--dep=')) || '').slice(6) || 0;   // profundidade máxima da QuadTree (padrão do app: 9)
 const JAN = +(args.find(a => a.startsWith('--janelas=')) || '').slice(10) || 0;   // nº máximo de janelas de teste (padrão do app: 6)
 const DESDE = +(args.find(a => a.startsWith('--desde=')) || '').slice(8) || 0;   // ano inicial: ignora registros anteriores (só base real, --csv)
+const ATE = (args.find(a => a.startsWith('--ate=')) || '').slice(6);   // AAAA-MM: ignora registros a partir desse mês, exclusive (só base real, --csv)
 const SEM = +pos[0] || 5;
 const FILE = path.resolve((CSV ? pos[0] : pos[1]) || path.join(here, '..', 'geocrime-bh', 'index.html'));
 const OUT = path.join(here, 'saida'); fs.mkdirSync(OUT, {recursive: true});
@@ -28,16 +29,17 @@ if (CSV) {
   await page.ev(`(async()=>{const b=Uint8Array.from(atob('${b64}'),c=>c.charCodeAt(0));await importCSV(new File([b],${JSON.stringify(path.basename(CSV))}),{auto:true})})()`);
   const info = await page.ev(`({n:S.all.length,chip:document.getElementById('dc').textContent})`);
   console.log(`Base importada: ${info.n} registros (${info.chip.trim()})`);
-  if (DESDE) {
-    const r = await page.ev(`(()=>{const t=new Date(${DESDE},0,1).getTime();const a=S.all.length;S.all=S.all.filter(p=>p.ts>=t);return{antes:a,depois:S.all.length}})()`);
-    console.log(`Filtro --desde=${DESDE}: ${r.depois} de ${r.antes} registros`); info.n = r.depois;
+  if (DESDE || ATE) {
+    const [ay, am] = ATE ? ATE.split('-').map(Number) : [0, 0];
+    const r = await page.ev(`(()=>{const t0=${DESDE ? `new Date(${DESDE},0,1).getTime()` : '-Infinity'},t1=${ATE ? `new Date(${ay},${am - 1},1).getTime()` : 'Infinity'};const a=S.all.length;S.all=S.all.filter(p=>p.ts>=t0&&p.ts<t1);return{antes:a,depois:S.all.length}})()`);
+    console.log(`Filtro${DESDE ? ' --desde=' + DESDE : ''}${ATE ? ' --ate=' + ATE : ''}: ${r.depois} de ${r.antes} registros`); info.n = r.depois;
   }
   if (!(info.n >= 100)) { await page.close(); console.error('Poucos registros importados (menos de 100): confira colunas, coordenadas dentro de BH e datas.'); process.exit(1); }
   R = await page.ev(`cmpRodar({fonte:'carregada',janelas:${JAN}}).then(r=>JSON.parse(JSON.stringify(r)))`);
 } else R = await page.ev(`cmpRodar({fonte:'cenarios',sementes:${SEM},janelas:${JAN}}).then(r=>JSON.parse(JSON.stringify(r)))`);
 await page.close();
 R.segundos = Math.round((Date.now() - t0) / 1000);
-const BASE = (CSV ? 'comparacao_real' : 'comparacao_bases') + (DEP ? '_prof' + DEP : '') + (JAN ? '_jan' + JAN : '') + (DESDE ? '_desde' + DESDE : '');
+const BASE = (CSV ? 'comparacao_real' : 'comparacao_bases') + (DEP ? '_prof' + DEP : '') + (JAN ? '_jan' + JAN : '') + (DESDE ? '_desde' + DESDE : '') + (ATE ? '_ate' + ATE : '');
 fs.writeFileSync(path.join(OUT, BASE + '.json'), JSON.stringify(R, null, 1));
 const n1 = (v, c = 1) => Number.isFinite(v) ? v.toFixed(c) : '—', p3 = p => p == null ? '—' : p < 0.001 ? '<0,001' : p.toFixed(3);
 let md = `# Comparação de algoritmos ${CSV ? 'na base carregada (' + path.basename(CSV) + ')' : `nos cenários de teste (${SEM} sementes)`}, ${R.segundos} s\n\nR=${R.params.R} m, profundidade máxima da QuadTree=${R.params.profundidade}.\n\n`;

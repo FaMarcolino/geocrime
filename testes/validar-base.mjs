@@ -84,10 +84,16 @@ const meses = Object.keys(porMes).sort(), vazios = [];
 if (meses.length) { let [y, m] = meses[0].split('-').map(Number); const [y1, m1] = meses.at(-1).split('-').map(Number);
   while (y < y1 || (y === y1 && m <= m1)) { const k = `${y}-${String(m).padStart(2, '0')}`; if (!porMes[k]) vazios.push(k); if (++m > 12) { m = 1; y++; } } }
 const anos = Object.keys(porAno).sort();
+const serie = []; if (meses.length) { let [y, m] = meses[0].split('-').map(Number); const [y1, m1] = meses.at(-1).split('-').map(Number);
+  while (y < y1 || (y === y1 && m <= m1)) { const k = `${y}-${String(m).padStart(2, '0')}`; serie.push([k, porMes[k] || 0]); if (++m > 12) { m = 1; y++; } } }
+const mediana = a => { const b = a.slice().sort((x, y) => x - y), h = b.length >> 1; return b.length % 2 ? b[h] : (b[h - 1] + b[h]) / 2; };
+const quebras = [];
+for (let i = 6; i < serie.length; i++) { const med = mediana(serie.slice(i - 6, i).map(x => x[1])); if (med < 20) continue; const r = serie[i][1] / med;
+  if (r < 0.3 || r > 3) { const ant = quebras.at(-1); if (!ant || ant.i !== i - 1) quebras.push({i, mes: serie[i][0], registros: serie[i][1], mediana_6_meses_anteriores: med, razao: +r.toFixed(2)}); else ant.i = i; } }
 
 const R = {arquivo: path.basename(ARQ), separador: sep === '\t' ? 'TAB' : sep, colunas: {lat: H[col.lat], lng: H[col.lng], data: col.data >= 0 ? H[col.data] : null, tipo: col.tipo >= 0 ? H[col.tipo] : null},
   caixa_BH: BB, linhas: n, importaveis: c.ok, descartes: {sem_coordenada: c.semCoord, fora_da_caixa_de_BH: c.foraBH}, sem_data_valida: c.semData, sem_hora_na_data: c.semHoraNaData, hora_00_00_00: c.horaZero,
-  periodo: {de: dmin, ate: dmax}, por_ano: porAno, meses_sem_registro: vazios, coordenadas_unicas_texto_exato: coordTxt.size, coordenadas_unicas_7_casas: coord.size, casas_decimais_por_ano: casas, coordenadas_repetidas: repetidas, mais_repetidas: topCoord.map(([k, v]) => ({coord: k, vezes: v})),
+  periodo: {de: dmin, ate: dmax}, por_ano: porAno, meses_sem_registro: vazios, quebras_de_nivel: quebras.map(({i, ...q}) => q), serie_mensal: serie, coordenadas_unicas_texto_exato: coordTxt.size, coordenadas_unicas_7_casas: coord.size, casas_decimais_por_ano: casas, coordenadas_repetidas: repetidas, mais_repetidas: topCoord.map(([k, v]) => ({coord: k, vezes: v})),
   duplicatas_exatas: exatasDup, instantes_repetidos: instRep, fora_da_caixa: fora, naturezas: [...tipos].sort((a, b) => b[1] - a[1]).slice(0, 15)};
 fs.writeFileSync(path.join(OUT, NOME + '.json'), JSON.stringify(R, null, 1));
 
@@ -109,6 +115,10 @@ if (col.data >= 0) {
   md += `\n- **Horário exatamente 00:00:00:** ${fmt(c.horaZero)} registros (${pct(c.horaZero, c.ok - c.semData)}). Pode significar "hora desconhecida"; o app trataria como meia-noite e isso distorce análises por hora do dia.\n`;
   if (c.semHoraNaData) md += `- **Datas sem horário:** ${fmt(c.semHoraNaData)} registros (o app assume 12h).\n`;
   md += `- **Meses sem nenhum registro** entre o primeiro e o último: ${vazios.length ? vazios.join(', ') : 'nenhum'}.\n`;
+  if (quebras.length) md += `- **Quebras de nível na série mensal** (mês com menos de 30% ou mais de 3× a mediana dos 6 meses anteriores): ${quebras.map(q => `${q.mes} (${fmt(q.registros)} registros contra mediana ${fmt(q.mediana_6_meses_anteriores)}; ${q.razao}×)`).join('; ')}. Uma queda abrupta e duradoura costuma indicar mudança ou interrupção na coleta, e não no fenômeno: confirmar com a fonte e evitar usar esse trecho como teste ou treino sem tratamento.
+`;
+  md += `- **Últimos 12 meses:** ${serie.slice(-12).map(x => x[0] + ' ' + fmt(x[1])).join(', ')}.
+`;
   const v = anos.map(a => porAno[a].n), mx = Math.max(...v), mn = Math.min(...v);
   if (mn > 0 && mx / mn >= 4) md += `- **Volume muito desigual entre anos** (de ${fmt(mn)} a ${fmt(mx)}): o aumento pode refletir mudança na coleta e não no fenômeno; confirmar com a fonte antes de usar o histórico antigo. O último ano pode estar incompleto (período termina em ${dmax}).\n`;
   md += `\n`; }
