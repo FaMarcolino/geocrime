@@ -64,7 +64,7 @@ Diferenças em relação a Mohler et al. (2011), confirmadas no texto (ver a sub
 
 **Chainey et al. (2008), *preprint*.**
 - **PAI:** definição confirmada: PAI = (n/N · 100) ÷ (a/A · 100), isto é, a taxa de acerto dividida pela fração da área; 100% de acerto em 100% da área dá 1. A mesma definição que o app usa.
-- **O artigo não define PEI.** Ele define só a taxa de acerto e o PAI, e cita a "Search Efficiency Rate" de Bowers et al. (2004) (eventos por km²), que o app não usa. A origem do PEI ainda precisa de referência própria (ver a seção 5).
+- **O artigo não define PEI.** Ele define só a taxa de acerto e o PAI, e cita a "Search Efficiency Rate" de Bowers et al. (2004) (eventos por km²), que o app não usa. A origem do PEI é Hunt (2016) (ver a seção 5).
 - **Resultado principal:** em quatro técnicas (elipses espaciais, mapa temático de áreas censitárias, mapa temático de grade e KDE), o **KDE foi a melhor** para prever onde os crimes ocorrerão, nas duas datas de corte testadas, e as elipses espaciais foram a pior. (A tabela 6 do *preprint* saiu desalinhada na extração do PDF: confira os valores de PAI por técnica no original antes de citar.)
 - **Por tipo de crime:** os mapas de crime de rua tiveram PAI sempre mais alto que os de arrombamento residencial e de furto/roubo de veículos. Com 3% da área, o KDE de três meses de dados capturou 20% dos crimes de rua do mês seguinte (PAI 6,59) e 8% dos arrombamentos (PAI 2,77). Os autores atribuem isso à oportunidade criminal ser concentrada e estática nos locais de comércio e lazer.
 - **Como o KDE foi ajustado:** núcleo **quártico**; largura de banda padrão do *Hotspot Detective* (cerca de 230 a 250 m) e célula de cerca de 46 a 49 m; "ponto quente" = a classe mais alta de 5 classes por quantis (a área **não é fixa**). O nosso "Histórico completo" usa **núcleo triangular de raio R = 500 m e orçamento fixo de 5% da área**, portanto é um KDE no espírito do artigo, não uma reprodução dele.
@@ -157,7 +157,7 @@ Em negrito, o melhor resultado de cada cenário (considerando grade e recorte). 
 
 ### Validação na base real (furtos de cabos de cobre em BH)
 
-**Dados.** `dados/base_dados.csv`: 19.146 registros de furtos de cabos de cobre em BH (mar/2018 a dez/2025), de registros operacionais da Prefeitura, da Guarda Municipal, da BHTrans e de operadoras (não são Boletins de Ocorrência policiais). Origem, tratamento e limitações estão em [dados/LEIAME.md](../dados/LEIAME.md); a fonte é Santos e Silva (2026, CSBC/LASDiGov). **Os resultados valem para esse tipo de crime, não para criminalidade em geral.** A base não tem coluna de natureza. O relatório de qualidade (`node testes/validar-base.mjs`) achou: 4 registros fora da caixa de BH usada pelo app, 493 duplicatas exatas (apesar de o artigo dizer que foram removidas), coordenadas arredondadas a ~11 m em 14,3% dos registros de 2024, e horário 00:00:00 em 1.903 registros, com proporção muito diferente por ano.
+**Dados.** `dados/base_dados.csv`: 19.146 registros de furtos de cabos de cobre em BH (mar/2018 a dez/2025), de registros operacionais da Prefeitura, da Guarda Municipal, da BHTrans e de operadoras (não são Boletins de Ocorrência policiais). Origem, tratamento e limitações estão em [dados/LEIAME.md](../dados/LEIAME.md); a fonte é Santos e Silva (2026, CSBC/LASDiGov). **Os resultados valem para esse tipo de crime, não para criminalidade em geral.** A base não tem coluna de natureza. O relatório de qualidade (`node testes/validar-base.mjs`) achou: 4 registros fora da caixa de BH usada pelo app, 493 duplicatas exatas (apesar de o artigo dizer que foram removidas), coordenadas arredondadas a ~11 m em 14,3% dos registros de 2024, e horário 00:00:00 em 1.903 registros, com proporção muito diferente por ano. **A série mensal tem quebras de nível:** cerca de 30 a 50 registros por mês em jul–dez/2022 e em jun–dez/2025, contra 300 a 700 nos demais meses de 2022 a 2025 (queda de cerca de 90%). O mais provável é mudança ou interrupção na coleta, e não no fenômeno; **a confirmar com os autores da base**. Isso atinge o protocolo (o teste de 2025 tem cerca de 2.600 dos 2.877 registros em jan–mai) e as janelas de teste mais recentes da nossa comparação.
 
 **Procedimento.** `node testes/comparar-bases.mjs --csv=dados/base_dados.csv --janelas=24 [--desde=2022]`: 24 janelas de 30 dias (os últimos 24 meses da base), treinando só com o que é anterior ao corte. Com `--desde=2022` a base é restringida a 2022 em diante, como no protocolo do artigo (que treina com 2022–2024, testa em 2025 e descarta 2018–2021 por deriva conceitual e pandemia). Nota técnica: o app contava a idade dos registros a partir de hoje; como a base termina em 2025, as janelas de teste ficavam vazias. Passou-se a contar a partir do registro mais recente (`btRebase`).
 
@@ -174,13 +174,28 @@ Em negrito, o melhor resultado de cada cenário (considerando grade e recorte). 
 | Últimos 30 dias | 28,8 | 29,1 | −6,4 | <0,001 |
 | Mesmo período do ano anterior | 24,8 | 25,1 | −10,4 | <0,001 |
 
+**Teste de robustez: sem os meses de baixo volume.** Como a série mensal despenca a partir de jun/2025, repetiu-se a comparação só com 2022-01 a 2025-05 (`--desde=2022 --ate=2025-06`, 16.059 registros; as 24 janelas passam a cobrir jun/2023 a mai/2025).
+
+| Método | Acerto % (grade) | Δ vs histórico completo | p (Holm) |
+|---|---|---|---|
+| Recência, meia-vida 120 d | 37,9 | +0,4 | 1,0 |
+| ETAS † | 37,7 | +0,2 | 1,0 |
+| Histórico completo (KDE) | 37,5 | — | — |
+| Recência, meia-vida 60 d | 37,1 | −0,5 | 1,0 |
+| KDE adaptativo † | 34,9 | −2,6 | 0,017 |
+| Últimos 30 dias | 31,8 | −5,8 | <0,001 |
+| Prospective hot-spotting † | 31,7 | −5,8 | <0,001 |
+| Mesmo período do ano anterior | 22,9 | −14,7 | <0,001 |
+
+As conclusões se mantêm: os métodos com muito histórico empatam (37,1% a 37,9%), usar pouco histórico perde de forma significativa, e o KDE adaptativo fica abaixo do de largura fixa (−1,8 ponto; intervalo −2,9 a −0,9; p < 0,001). O acerto médio sobe cerca de 2 pontos, como esperado de uma série menos ruidosa.
+
 **O que os resultados permitem dizer.**
 - **Usar pouco histórico é pior.** Últimos 30 dias, meia-vida de 15 dias, mesmo período do ano anterior e Bowers perdem de forma significativa para o histórico completo.
 - **Os melhores métodos empatam.** Recência de 45 a 120 dias, ETAS e histórico completo ficam entre 35,4% e 36,5% (PAI ≈ 7). Com todos os dados, a recência de 120 dias aparecia como significativamente melhor (+1,4; p = 0,037); com a base restrita a 2022 em diante, deixa de ser (+0,7; p = 1,0). **Esse ganho é frágil e não deve ser apresentado como vitória.**
-- **O recorte por QuadTree não mudou o acerto** em nenhum método (diferenças próximas de zero, intervalos que incluem o zero). Os ganhos vistos nos dados sintéticos para os métodos ruidosos **não se repetiram aqui**.
+- **O recorte por QuadTree praticamente não mudou o acerto** nas duas rodadas acima (diferenças próximas de zero, intervalos que incluem o zero). Só no teste de robustez abaixo apareceu um ganho pequeno (+1,7 ponto) para o método mais ruidoso (últimos 30 dias), no mesmo sentido do que se viu nos dados sintéticos, mas muito menor.
 - **O ETAS não superou o histórico completo**, ao contrário do que ocorreu nos cenários sintéticos.
 
-**Limites (base real).** Um só tipo de crime e uma só cidade; p-valores otimistas (janelas consecutivas compartilham dados de treino); 24 janelas; fonte operacional, com subnotificação e viés de registro; qualidade heterogênea entre anos (ver relatório de qualidade).
+**Limites (base real).** Um só tipo de crime e uma só cidade; quebras de nível na coleta (jul–dez/2022 e jun–dez/2025, ~90% menos registros); p-valores otimistas (janelas consecutivas compartilham dados de treino); 24 janelas; fonte operacional, com subnotificação e viés de registro; qualidade heterogênea entre anos (ver relatório de qualidade).
 
 **Limites (gerais do experimento).**
 - Os cenários sintéticos valem para estes cenários, parâmetros e sementes; a base real, para um só tipo de crime (ver acima). Os dois conjuntos de resultados **divergem em pontos importantes** (ETAS e recorte por QuadTree), e isso deve ser dito.
@@ -201,7 +216,7 @@ Em negrito, o melhor resultado de cada cenário (considerando grade e recorte). 
 
 - **Acerto (hit rate):** % dos registros do período seguinte que caem nos 5% de células mais pontuadas.
 - **PAI** (*predictive accuracy index*, Chainey et al., 2008, definição conferida no texto): acerto ÷ fração da área coberta (aqui 5%). O acaso dá cerca de 1.
-- **PEI** (*predictive efficiency index*): acertos ÷ máximo de acertos possível com o mesmo número de células (0 a 1). Para comparar recortes diferentes, o app usa o mesmo orçamento de área e normaliza o PEI pelo máximo de cada recorte (não é comparável entre recortes). Foi usado no concurso do NIJ. **Chainey et al. (2008) não definem o PEI** (conferido no texto): falta localizar e citar o artigo de origem. **Existe uma versão revisada (PEI\*)** [conferir: White, Hunt e Green, 2023, *Security Journal*], não implementada.
+- **PEI** (*predictive efficiency index*): acertos ÷ máximo de acertos possível com o mesmo número de células (0 a 1). Para comparar recortes diferentes, o app usa o mesmo orçamento de área e normaliza o PEI pelo máximo de cada recorte (não é comparável entre recortes). Foi usado no concurso do NIJ. **Chainey et al. (2008) não definem o PEI** (conferido no texto). A métrica vem de **Hunt (2016)** (tese de doutorado, American University; **não lida**): PEI = c_a / c_a*, em que c_a é o número de crimes nas áreas marcadas pelo modelo, com área total a, e c_a* é o máximo de crimes que poderia ser capturado com uma área do mesmo tamanho. A fórmula foi conferida em **Povala, Virtanen e Girolami (2020)**, que a atribui a Hunt (2016) e a distingue do PAI de Chainey et al. (2008); a implementação do app segue essa definição (acertos ÷ máximo possível com o mesmo número de células). **Existe uma versão revisada, o PEI\*,** proposta por White, Hunt e Green (2023, *Security Journal*), que a apresentam como mais realista operacionalmente; **não foi implementada**, e só o resumo desse artigo foi conferido (título, autoria, DOI), pois o texto completo exige acesso ao periódico.
 - **WAPE** para o volume por região (já existia).
 - A validação é **temporal**: treina só com o que é anterior à janela e avalia nos dias seguintes, em até 6 janelas.
 
@@ -219,6 +234,8 @@ CHAINEY, S.; TOMPSON, L.; UHLIG, S. The utility of hotspot mapping for predictin
 
 FLAXMAN, S.; CHIRICO, M.; PEREIRA, P.; LOEFFLER, C. Scalable high-resolution forecasting of sparse spatiotemporal events with kernel methods: a winning solution to the NIJ "Real-Time Crime Forecasting Challenge". **Annals of Applied Statistics**, v. 13, n. 4, p. 2564-2585, 2019. DOI 10.1214/19-AOAS1284.
 
+HUNT, J. M. **Do crime hot spots move? Exploring the effects of the modifiable areal unit problem and modifiable temporal unit problem on crime hot spot stability.** 2016. Tese (Doutorado) – American University, Washington, D.C., 2016. [não lida; citada por Povala et al. (2020) como origem do PEI]
+
 GORR, W. L.; OLLIGSCHLAEGER, A.; THOMPSON, Y. Short-term forecasting of crime. **International Journal of Forecasting**, v. 19, n. 4, p. 579-594, 2003. DOI 10.1016/S0169-2070(03)00092-X.
 
 KOUNADI, O. et al. A systematic review on spatial crime forecasting. **Crime Science**, v. 9, 2020. DOI 10.1186/s40163-020-00116-7. [conferir iniciais e número do artigo]
@@ -227,13 +244,15 @@ MOHLER, G. O.; SHORT, M. B.; BRANTINGHAM, P. J.; SCHOENBERG, F. P.; TITA, G. E. 
 
 MOHLER, G. O. et al. Randomized controlled field trials of predictive policing. **Journal of the American Statistical Association**, v. 110, n. 512, p. 1399-1411, 2015. DOI 10.1080/01621459.2015.1077710. [conferir iniciais e coautores]
 
+POVALA, J.; VIRTANEN, S.; GIROLAMI, M. Burglary in London: insights from statistical heterogeneous spatial point processes. **arXiv:1910.05212** [stat.AP], v. 3, 2020. [fonte secundária da fórmula do PEI; conferir se há versão publicada]
+
 RUMMENS, A.; HARDYNS, W. Comparison of near-repeat, machine learning and risk terrain modeling for making spatiotemporal predictions of crime. **Applied Spatial Analysis and Policy**, v. 13, p. 1035-1053, 2020. DOI 10.1007/s12061-020-09339-2.
 
 RUMMENS, A.; HARDYNS, W. The effect of spatiotemporal resolution on predictive policing model performance. **International Journal of Forecasting**, v. 37, n. 1, p. 125-133, 2021. [conferir]
 
 RUMMENS, A.; HARDYNS, W.; PAUWELS, L. The use of predictive analysis in spatiotemporal crime forecasting: building and testing a model in an urban context. **Applied Geography**, v. 86, p. 255-261, 2017. DOI 10.1016/j.apgeog.2017.06.011.
 
-WHITE; HUNT; GREEN. A discussion of current crime forecasting indices and an improvement to the prediction efficiency index for applications. **Security Journal**, 2023. [conferir autoria completa, volume e DOI]
+WHITE, V. M.; HUNT, J.; GREEN, B. A discussion of current crime forecasting indices and an improvement to the prediction efficiency index for applications. **Security Journal**, 2023. DOI 10.1057/s41284-023-00367-4. [só o resumo foi lido; conferir volume e páginas]
 
 **Aprendizado profundo (para a seção de trabalhos relacionados):** o trabalho inicial com ST-ResNet em previsão de crimes em tempo real é um *preprint* (arXiv:1707.03340) [conferir autoria e se há versão publicada]. Há trabalhos revisados por pares que usam ST-ResNet com LSTM (Scientific Reports, 2025, DOI 10.1038/s41598-025-24559-7) e ST-ResNet com resolução adaptativa em Suzhou (ISPRS International Journal of Geo-Information, v. 10, n. 5, art. 314, 2021) [conferir ambos].
 
@@ -241,9 +260,32 @@ SANTOS, D. E.; SILVA, C. A. **Avaliação comparativa de métodos de agrupamento
 
 **Trabalho brasileiro a obter (título e autoria a confirmar na fonte):** dissertação da UFC (2020) sobre hotspots em redes de ruas (PHAR, SHAR, Expansive Network) comparados ao KDE em grade.
 
-## 7. Próximos passos desta frente
+## 7. Limitações do estudo
 
-1. **Feito em parte (16/11/2026):** textos completos de Mohler et al. (2011, manuscrito) e Chainey et al. (2008, *preprint*) lidos e a seção 3 corrigida. **Falta ler Bowers et al. (2004)** (acesso restrito: pedir pela biblioteca da universidade/Portal CAPES ou aos autores) e conferir os números na versão publicada de cada artigo. Falta também decidir se o ETAS passa a ter ν(t) e fundo com largura escolhida por validação cruzada, para ficar mais próximo do artigo. A definição do **PEI** também precisa de referência própria (Chainey não a define).
-2. **Feito (16/11/2026): base real.** Validação em 19.146 registros de furtos de cabos de cobre em BH (ver seção 3). Pendente: confirmar com os autores da base as 493 duplicatas exatas, a precisão das coordenadas e o horário 00:00:00; repetir com outros parâmetros da QuadTree (profundidade, capacidade) e outros orçamentos de área; e obter uma base de **outro tipo de crime** para ver se os resultados generalizam.
+**Dados.**
+- A base real é de **um só tipo de crime** (furto de cabos de cobre) e **uma só cidade**; os resultados não se generalizam a criminalidade em geral.
+- A fonte é **operacional** (Prefeitura, Guarda Municipal, BHTrans, operadoras), não policial: reflete o que esses órgãos registram, com subnotificação e viés de registro. A licença dos registros originais não é declarada pelos autores.
+- A base **não tem coluna de natureza**; o app trata tudo como um único tipo (é preciso escolher "Furto" no assistente de importação, senão o relatório rotula os registros como "Roubo").
+- Qualidade: 493 duplicatas exatas, coordenadas arredondadas a ~11 m em parte de 2024, horário 00:00:00 em 9,9% dos registros (provável "hora desconhecida", que distorce análises por hora do dia) e **quebras de nível na coleta** (jul–dez/2022 e jun–dez/2025, ~90% menos registros). Um teste de robustez sem os meses de baixo volume manteve as conclusões.
+
+**Validação.**
+- As janelas de teste de uma mesma série **compartilham dados de treino**, então os p-valores são aproximados e tendem a ser **otimistas**. A correção de Holm vale dentro de cada cenário, não entre cenários nem entre rodadas.
+- Poucas janelas: 6 no backtest do app e 24 na comparação com a base real; só se testou o orçamento de 5% da área.
+- Os parâmetros da QuadTree (profundidade 9, capacidades por região) e do KDE adaptativo (15 vizinhos, raio entre R/2 e 2R) **não foram ajustados**; outros valores podem mudar o resultado.
+- A pontuação de cada folha da QuadTree é a média das células da grade (o algoritmo não é reexecutado na escala da folha), e o **PEI não é comparável entre recortes**.
+- Os **cenários sintéticos foram construídos** para exibir fenômenos específicos (por exemplo, o contágio é gerado por um processo auto-excitante); a vantagem do ETAS neles é esperada e **não se repetiu na base real**. Os resultados sintéticos e o real divergem, e isso deve ser dito.
+
+**Implementações.**
+- O ETAS não tem o fator temporal global ν(t) nem a largura do fundo escolhida por validação cruzada; o Prospective hot-spotting é uma implementação própria da ideia, conferida só de segunda mão (via Mohler et al., 2011); os números de Mohler e de Chainey vêm de manuscrito e *preprint*.
+- O PEI segue Hunt (2016) conforme descrito em fonte secundária; o PEI\* não foi implementado.
+
+**Uso.**
+- Previsão de incidência **não é causalidade** nem recomendação operacional. Concentrar policiamento onde há mais registros pode reforçar o próprio padrão (ciclo de retroalimentação); o app marca isso no relatório.
+- A comparação não mede a vantagem **operacional** do recorte por QuadTree (unidades naturais de patrulha, usadas na ronda por células).
+
+## 8. Próximos passos desta frente
+
+1. **Feito em parte (16/11/2026):** textos completos de Mohler et al. (2011, manuscrito) e Chainey et al. (2008, *preprint*) lidos e a seção 3 corrigida. **Falta ler Bowers et al. (2004)** (acesso restrito: pedir pela biblioteca da universidade/Portal CAPES ou aos autores) e conferir os números na versão publicada de cada artigo. Falta também decidir se o ETAS passa a ter ν(t) e fundo com largura escolhida por validação cruzada, para ficar mais próximo do artigo. Falta ler a tese de Hunt (2016), origem do PEI (a fórmula foi conferida só em fonte secundária), e o texto completo de White, Hunt e Green (2023), sobre o PEI\*.
+2. **Feito (16/11/2026): base real.** Validação em 19.146 registros de furtos de cabos de cobre em BH (ver seção 3). Pendente: confirmar com os autores da base as 493 duplicatas exatas, a precisão das coordenadas, o horário 00:00:00 e as quedas de volume em jul–dez/2022 e jun–dez/2025; repetir com outros parâmetros da QuadTree (profundidade, capacidade) e outros orçamentos de área; e obter uma base de **outro tipo de crime** para ver se os resultados generalizam.
 3. Reexecutar o algoritmo na escala de cada folha em vez de agregar a grade, e testar um método sazonal alinhado a datas móveis (Carnaval), que não existe hoje.
 4. Decidir se entram Holt (volume) e floresta aleatória como quarto método.

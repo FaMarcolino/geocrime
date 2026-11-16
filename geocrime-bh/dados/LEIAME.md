@@ -36,7 +36,7 @@ node comparar-bases.mjs --csv=../geocrime-bh/dados/base_dados.csv --janelas=24
 - Sem coluna de natureza, o app trata todos os registros como um único tipo.
 - Observações próprias, geradas por `testes/validar-base.mjs` (não vêm do artigo):
   - 1.903 registros têm horário exatamente 00:00:00 (possível "hora desconhecida"), e a proporção varia muito por ano: 23,5% em 2022, 0,1% em 2023, 13,6% em 2024 e 22,1% em 2025. Isso sugere fontes ou formatos diferentes ao longo do tempo.
-  - O volume anual cresce muito a partir de 2022 (523 em 2018, 980 em 2021, 5.594 em 2023, 6.076 em 2024); os autores justificam o recorte 2022–2025 por deriva conceitual e pandemia.
+  - O volume é muito irregular: 20 a 100 registros por mês em 2018–2021, 300 a 380 em jan–abr/2022, **cerca de 30 a 50 em jul–dez/2022**, 250 a 700 em 2023–mai/2025 e **cerca de 40 a 55 de jun a dez/2025** (queda de ~90%). Parece mudança ou interrupção na coleta, não no fenômeno; confirmar com os autores. Os autores justificam o recorte 2022–2025 por deriva conceitual e pandemia, mas não mencionam essas quedas.
   - **493 registros extras são duplicatas exatas** (mesma latitude, longitude e data/hora em texto), apesar de o artigo dizer que duplicatas exatas foram removidas. Confirmar com os autores.
   - **Precisão das coordenadas varia**: 866 registros de 2024 (14,3%) têm 4 casas decimais ou menos (~11 m), o que cria pontos repetidos artificialmente.
   - 4 registros ficam a 145–297 m da borda da caixa de BH usada pelo app e são descartados na importação (19.142 de 19.146 importados).
