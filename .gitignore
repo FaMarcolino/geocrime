@@ -5,6 +5,11 @@
 !/geocrime-bh/
 !/testes/
 
+# dados reais ficam só no computador (origem e licença: ver geocrime-bh/dados/LEIAME.md); a pasta csv/ são totais mensais sem coordenadas
+/geocrime-bh/csv/
+/geocrime-bh/dados/*
+!/geocrime-bh/dados/LEIAME.md
+
 # gerado a cada execução dos testes (capturas, PDFs, relatórios)
 /testes/saida/
 node_modules/
