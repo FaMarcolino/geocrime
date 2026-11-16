@@ -44,7 +44,7 @@ fs.writeFileSync(path.join(OUT, BASE + '.json'), JSON.stringify(R, null, 1));
 const n1 = (v, c = 1) => Number.isFinite(v) ? v.toFixed(c) : '—', p3 = p => p == null ? '—' : p < 0.001 ? '<0,001' : p.toFixed(3);
 let md = `# Comparação de algoritmos ${CSV ? 'na base carregada (' + path.basename(CSV) + ')' : `nos cenários de teste (${SEM} sementes)`}, ${R.segundos} s\n\nR=${R.params.R} m, profundidade máxima da QuadTree=${R.params.profundidade}.\n\n`;
 for (const c of R.cenarios) {
-  md += `## ${c.nome}\n${c.n} janelas de ${c.W} d${CSV ? '' : ` (${c.sementes} sementes)`}; ~${c.nFolhas} células na QuadTree\n\n| Método | Grade acerto | PAI | PEI | QT acerto | PAI | PEI | Δ vs KDE (p.p.) | p | Δ recorte (p.p.) [IC95] | p |\n|---|---|---|---|---|---|---|---|---|---|---|\n`;
+  md += `## ${c.nome}\n${c.n} janelas de ${c.W} d${CSV ? '' : ` (${c.sementes} sementes)`}; ~${c.nFolhas} células na QuadTree\n\n| Método | Grade acerto | PAI | PEI* | QT acerto | PAI | PEI* | Δ vs KDE (p.p.) | p | Δ recorte (p.p.) [IC95] | p |\n|---|---|---|---|---|---|---|---|---|---|---|\n`;
   for (const l of c.linhas) md += `| ${l.nome}${l.ref ? ' †' : ''} | ${n1(l.grade.hit)} | ${n1(l.grade.pai)} | ${n1(l.grade.pei, 2)} | ${n1(l.qt.hit)} | ${n1(l.qt.pai)} | ${n1(l.qt.pei, 2)} | ${l.id === 'B' ? '—' : n1(l.dBase.m)} | ${l.id === 'B' ? '—' : p3(l.dBase.padj)} | ${n1(l.dCorte.m)} [${n1(l.dCorte.ic[0])}; ${n1(l.dCorte.ic[1])}] | ${p3(l.dCorte.padj)} |\n`;
   for (const l of c.linhas) if (l.dVs) {
     const ref = c.linhas.find(x => x.id === l.dVs.vs);
