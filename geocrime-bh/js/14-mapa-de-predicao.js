@@ -9,7 +9,9 @@ function pmPerfil(ns,datas){const h=Array(24).fill(0),d=Array(7).fill(0);for(con
  let bs=0,bv=-1;for(let i=0;i<24;i++){const v=h[i]+h[(i+1)%24]+h[(i+2)%24];if(v>bv){bv=v;bs=i}}
  const bd=d.indexOf(Math.max(...d));return{hora:`${bs}h–${(bs+3)%24}h`,horaPct:Math.round(bv/n*100),dia:datas?DIAS[bd]:null,diaPct:datas?Math.round(d[bd]/n*100):0,n:ns.length}}
 function pmModel(){const nt=$('pnt').value,pt=$('ppt').value,rg=$('fr').value,wg=$('pwg').checked,R=+$('R').value,HL=+$('hl').value||45,wv=p=>wg?T[p.t].w:1;
- const P=S.all.filter(p=>(!nt||p.t===nt)&&inPer(p.h,pt)&&(rg===''||p.r===+rg));if(P.length<50)return null;
+ const P0=S.all.filter(p=>(!nt||p.t===nt)&&inPer(p.h,pt)&&(rg===''||p.r===+rg));if(P0.length<50)return null;
+ /* a idade conta a partir do registro mais recente: uma base que termina há meses prevê os dias seguintes ao último registro (o dia da semana é fixado antes de mudar a idade) */
+ const atraso=P0.reduce((m,p)=>Math.min(m,p.ago),Infinity);P0.forEach(wdOf);const P=btRebase(P0);
  const bt=btCache(P,R,HL,wv,[nt,pt,rg,wg].join('|'),$('phz').value||'auto'),W=bt.W,sel=$('pmm').value||'auto',auto=sel==='auto',
   id=auto?(bt.res?bt.res.melhor:'C'+HL):sel,metodo=bt.mets.find(m=>m.id===id&&!m.ref)||bt.mets.find(m=>m.id==='C'+HL);/* P e E são só comparação: nunca geram o mapa */
  const q=mkQT();P.forEach(p=>q.ins(p));
@@ -23,7 +25,7 @@ function pmModel(){const nt=$('pnt').value,pt=$('ppt').value,rg=$('fr').value,wg
  for(const c of cells.slice().sort((u,v)=>v.e-u.e)){if(zs.length>=10)break;if(zs.every(z=>Math.hypot(z.x-c.x,z.y-c.y)>=2*R)){const nn=q.knn(c.x,c.y,1,[],{v:0})[0],e=sum(c.k),sd=1.2816*Math.sqrt(e),ns=q.rng(c.x,c.y,R,[],{v:0}),loc=nn&&nn.p.b!=='Malha urbana'&&nn.p.b!=='Ponto importado'?nn.p.b:'';
   zs.push({x:c.x,y:c.y,e,lo:Math.max(0,e-sd),hi:e+sd,prob:1-Math.exp(-e),b:loc,r:RG[c.r].n,perfil:pmPerfil(ns,datas),lat:latOf(c.y),lng:lngOf(c.x),rua:RUA.get(c.x.toFixed(0)+','+c.y.toFixed(0))||''})}}
  zs.sort((u,v)=>v.e-u.e);
- return{cells,cs,mx,nx,ny,x0,y0,E,zs,R,HL,wg,P,n:P.length,total:F.reduce((a,c)=>a+c,0),te:P.filter(p=>p.ago<W),bt,metodo,auto,vm,F,ult,W,datas}}
+ return{cells,cs,mx,nx,ny,x0,y0,E,zs,R,HL,wg,P,n:P.length,total:F.reduce((a,c)=>a+c,0),te:P.filter(p=>p.ago<W),bt,metodo,auto,vm,F,ult,W,datas,atraso}}
 
 /* nome da rua de cada zona (serviço "nearest" do OSRM; opcional, exige internet) */
 const RUA=new Map();
